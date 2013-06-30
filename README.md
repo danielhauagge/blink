@@ -13,7 +13,7 @@ Base Setup
 SIFT Worker
 ----
     sudo apt-get install cmake libboost-python-dev
-    git submodule update libsiftfast-1.2
+    git submodule update --init libsiftfast-1.2
     cd libsiftfast-1.2
     mkdir build
     cd build
