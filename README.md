@@ -52,3 +52,13 @@ Edit blink.cfg
     aws_key = # Sign up for an account with Amazon
     aws_secret = # and get the key too
     bucket = blink # Images and SIFT results are stored at http://s3.amazonaws.com/<bucket>/<collection>/<photo>
+    
+Running
+====
+On each worker:
+
+    ./fetch.py
+    
+To make a query and add photos to database:
+
+    ./order.py --query "your search query" --tag "a tag for organizing your photos"
