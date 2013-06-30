@@ -2,12 +2,24 @@ blink
 =====
 *blink* is a tool for making Flickr queries and post-processing images and their metadata.  Nodes are coordinates through mongodb.  New queries are made with the order.py script and stored in the database.  Each worker runs the fetch.py script which polls the database and processes the associated image by requesting the actual photo and metadata from Flickr as well as estimating the focal length in pixels and computing SIFT feature points.
 
+----
+
 This tool is designed to be run on EC2 with an S3 bucket provisioned in a region where there are no additional bandwidth charges.  (e.g. EC2 North Virginia + S3 US Standard)  Transfer from internet to EC2 should not have additional bandwidth charges.  Transfer from S3 to internet does incur additional charges, but if you use the SIFT worker and transfer only the compressed keypoints, you will be transfering much less than if you were to transfer the images.
+
+----
 
 blink makes use of the following Flickr API calls:
 * [flickr.photos.search](http://www.flickr.com/services/api/flickr.photos.search.html)
 * [flickr.photos.getSizes](http://www.flickr.com/services/api/flickr.photos.getSizes.html)
 * [flickr.photos.getExif](http://www.flickr.com/services/api/flickr.photos.getExif.html) 
+
+Keep this in mind when configuring the number of workers you run at one time:
+
+[Flickr API](http://www.flickr.com/services/developer/api/)
+
+"Limits: Since the Flickr API is quite easy to use, it's also quite easy to abuse, which threatens all services relying on the Flickr API. To help prevent this, we limit the access to the API per key. If your application stays under 3600 queries per hour across the whole key (which means the aggregate of all the users of your integration), you'll be fine. If we detect abuse on your key, we will need to expire the key, or turn it off, in order to preserve the Flickr API functionality for others (including us!). We also track usage on other factors as well to ensure no API user abuses the system."
+
+It's probably pretty each to go over 1 query per second.  You can always create multple cfg files with different API keys and tell fetch.py to use it with --config.
 
 Installation
 ====
