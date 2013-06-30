@@ -4,6 +4,11 @@ blink
 
 This tool is designed to be run on EC2 with an S3 bucket provisioned in a region where there are no additional bandwidth charges.  (e.g. EC2 North Virginia + S3 US Standard)  Transfer from internet to EC2 should not have additional bandwidth charges.  Transfer from S3 to internet does incur additional charges, but if you use the SIFT worker and transfer only the compressed keypoints, you will be transfering much less than if you were to transfer the images.
 
+blink makes use of the following Flickr API calls:
+* [flickr.photos.search](http://www.flickr.com/services/api/flickr.photos.search.html)
+* [flickr.photos.getSizes](http://www.flickr.com/services/api/flickr.photos.getSizes.html)
+* [flickr.photos.getExif](http://www.flickr.com/services/api/flickr.photos.getExif.html) 
+
 Installation
 ====
 Base Setup
