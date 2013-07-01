@@ -15,58 +15,55 @@ from focal_compute import focal_compute
 
 from common import *
 
-def poll(idx, api_key, host, port, database, collection, aws_key, aws_secret, bucket):
-    logging.info(idx)
-    client = pymongo.MongoClient(host, port)
-    collection = client[database][collection]
-
-    s3conn = S3Connection(aws_key, aws_secret)
-    b = s3conn.get_bucket(bucket)
-
-    tasks = [
-        focal_compute, 
-        exif_fetch, 
-        photo_fetch, 
-        sift_compute,
-    ]
-
-    while True:
-        try:
-            fast = False
-            for task in tasks:
-		try:
-                	fast |= task(collection=collection, b=b, api_key=api_key)
-		except socket.error, e:
-			logging.info('ERROR: %s %d'%(e,idx))
-                    
-            if not fast:
-                logging.info('sleep')
-                time.sleep(1)
-        except KeyboardInterrupt:
-            logging.info('Terminating polling loop %d'%idx)
-            break
-
 if __name__ == '__main__':
     logging.basicConfig(level=logging.INFO)
 
     config = load_config()
 
-    def closure(idx):
-        poll(
-            idx,
-            config.api_key,
-            config.host, 
-            config.port, 
-            config.database, 
-            config.collection, 
-            config.aws_key, 
-            config.aws_secret, 
-            config.bucket
-        )
+    client = pymongo.MongoClient(config.host, config.port)
+    collection = client[config.database][config.collection]
 
-    n = 2*multiprocessing.cpu_count()
-    pool = multiprocessing.Pool(processes=n)
+    s3conn = S3Connection(config.aws_key, config.aws_secret)
+    b = s3conn.get_bucket(config.bucket)
+    api_key = config.api_key
+
+    def task_generator():
+        tasks = [
+            focal_compute, 
+            exif_fetch, 
+            photo_fetch, 
+            sift_compute,
+        ]
+
+        try:
+            while True:
+                for task in tasks:
+                    yield task
+        except KeyboardInterrupt:
+            logging.info('Terminating workers')
+
+    def closure(task):
+        global last_called
+        try:
+            task(collection=collection, b=b, api_key=api_key)
+        except KeyboardInterrupt:
+            pass
+        now = datetime.datetime.now()
+        diff = now - last_called
+        second = datetime.timedelta(seconds=1)
+        if diff < second:
+            remaining = second - diff
+            time.sleep(remaining.total_seconds())
+        last_called = datetime.datetime.now()
+
+    def init():
+        global last_called
+        last_called = datetime.datetime.now()
+
+    pool = multiprocessing.Pool(initializer=init)
     try:
-        pool.map(closure, xrange(n))
+        for task in task_generator():
+            result = pool.apply_async(closure, (task,))
+            #result.get()
     except KeyboardInterrupt:
         logging.info('Terminating manager')
