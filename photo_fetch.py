@@ -28,7 +28,7 @@ def get_image_url(api_key, flickr_id):
     if response['stat'] == 'fail':
         raise FlickrException(response['code'], response['message'])
 
-    sizes = {int(entry['width'])*int(entry['height']):(entry['source'],int(entry['width']),int(entry['height'])) for entry in response['sizes']['size']}
+    sizes = {int(entry['width'])*int(entry['height']):(entry['source'],int(entry['width']),int(entry['height'])) for entry in response['sizes']['size'] if entry['media'] == 'photo'}
     max_size = max(sizes.keys())
     return sizes[max_size]    
 
