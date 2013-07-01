@@ -6,6 +6,7 @@ import pymongo
 import multiprocessing
 import logging
 import time
+import socket
 
 from exif_fetch import exif_fetch
 from photo_fetch import photo_fetch
@@ -33,7 +34,10 @@ def poll(idx, api_key, host, port, database, collection, aws_key, aws_secret, bu
         try:
             fast = False
             for task in tasks:
-                fast |= task(collection=collection, b=b, api_key=api_key)
+		try:
+                	fast |= task(collection=collection, b=b, api_key=api_key)
+		except socket.error, e:
+			logging.info('ERROR: %s %d'%(e,idx))
                     
             if not fast:
                 logging.info('sleep')
