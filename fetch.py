@@ -2,6 +2,8 @@
 
 from boto.s3.connection import S3Connection
 import pymongo
+
+import multiprocessing
 import logging
 import time
 
@@ -12,7 +14,8 @@ from focal_compute import focal_compute
 
 from common import *
 
-def poll(api_key, host, port, database, collection, aws_key, aws_secret, bucket):
+def poll(idx, api_key, host, port, database, collection, aws_key, aws_secret, bucket):
+    logging.info(idx)
     client = pymongo.MongoClient(host, port)
     collection = client[database][collection]
 
@@ -36,7 +39,7 @@ def poll(api_key, host, port, database, collection, aws_key, aws_secret, bucket)
                 logging.info('sleep')
                 time.sleep(1)
         except KeyboardInterrupt:
-            logging.info('Terminating polling loop')
+            logging.info('Terminating polling loop %d'%idx)
             break
 
 if __name__ == '__main__':
@@ -44,13 +47,22 @@ if __name__ == '__main__':
 
     config = load_config()
 
-    poll(
-        config.api_key,
-        config.host, 
-        config.port, 
-        config.database, 
-        config.collection, 
-        config.aws_key, 
-        config.aws_secret, 
-        config.bucket
-    )
+    def closure(idx):
+        poll(
+            idx,
+            config.api_key,
+            config.host, 
+            config.port, 
+            config.database, 
+            config.collection, 
+            config.aws_key, 
+            config.aws_secret, 
+            config.bucket
+        )
+
+    n = 2*multiprocessing.cpu_count()
+    pool = multiprocessing.Pool(processes=n)
+    try:
+        pool.map(closure, xrange(n))
+    except KeyboardInterrupt:
+        logging.info('Terminating manager')
