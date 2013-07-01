@@ -49,8 +49,13 @@ def sift_compute(collection, b, **kwargs):
         with tempfile.NamedTemporaryFile(suffix=splitext[1], delete=False) as f:
             kin.get_contents_to_file(f)
             f.close()
-            im = Image.open(f.name)
-            os.unlink(f.name)
+	    try:
+            	im = Image.open(f.name)
+ 	    except IOError, e:
+		logging.info('ERROR: %s %s sift'%(entry['_id'],e))
+		return False
+ 	    finally:
+            	os.unlink(f.name)
         im = im.convert(mode='L')
         im.resize((entry['height'],entry['width']), Image.ANTIALIAS)
         siftimage = siftfastpy.Image(numpy.reshape(im.getdata(), im.size[::-1]))
