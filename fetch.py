@@ -3,6 +3,7 @@
 from boto.s3.connection import S3Connection
 import pymongo
 
+import itertools
 import multiprocessing
 import logging
 import time
@@ -35,35 +36,23 @@ if __name__ == '__main__':
             sift_compute,
         ]
 
-        try:
-            while True:
-                for task in tasks:
-                    yield task
-        except KeyboardInterrupt:
-            logging.info('Terminating workers')
+        while True:
+            for task in tasks:
+                yield task
 
     def closure(task):
-        global last_called
         try:
             task(collection=collection, b=b, api_key=api_key)
         except KeyboardInterrupt:
             pass
-        now = datetime.datetime.now()
-        diff = now - last_called
-        second = datetime.timedelta(seconds=1)
-        if diff < second:
-            remaining = second - diff
-            time.sleep(remaining.total_seconds())
-        last_called = datetime.datetime.now()
 
-    def init():
-        global last_called
-        last_called = datetime.datetime.now()
-
-    pool = multiprocessing.Pool(initializer=init)
+    pool = multiprocessing.Pool()
+    gen = task_generator()
+    N = 100
     try:
-        for task in task_generator():
-            result = pool.apply_async(closure, (task,))
-            #result.get()
+        while True:
+            g = pool.map(closure, itertools.islice(gen, N));
+            if not any(g):
+                time.sleep(2)
     except KeyboardInterrupt:
         logging.info('Terminating manager')
