@@ -26,23 +26,6 @@ def get_image_url(api_key, flickr_id):
     response = json.loads(data)
 
     if response['stat'] == 'fail':
-        # Some errors should be hidden
-        # I think the only case we don't want to handle is permission denied
-        hide_error = {
-            1: False, # photo not found
-            2: True, # permission denied
-            100: False, # invalid api key
-            105: False, # service currently unavailable
-            111: False, # format "xxx" not found
-            112: False, # method "xxx" not found
-            114: False, # invalid soap envelope
-            115: False, # invalid xml-rpc method call
-            116: False, # bad url found
-        }[response['code']]
-            
-        if hide_error:
-            return [], ''
-
         raise FlickrException(response['code'], response['message'])
 
     sizes = {int(entry['width'])*int(entry['height']):(entry['source'],int(entry['width']),int(entry['height'])) for entry in response['sizes']['size']}
