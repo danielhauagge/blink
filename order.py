@@ -19,7 +19,7 @@ def split_every(n, iterable):
         yield piece
         piece = list(islice(i, n))
 
-def search(api_key, query, tag):
+def search(api_key, query, tag, date_min, date_max):
     page = 1
     nPages = 1
 
@@ -33,10 +33,22 @@ def search(api_key, query, tag):
             'page'              :   page,
             'per_page'          :   500,
             'extras'            :   'description,date_taken,owner_name,geo_tags',
+            'license'           :   '4,7',
+            'privacy_filter'    :   1,
+            'safe_search'       :   3,
+            'content_type'      :   6,
         }
+        if date_min is not None:
+            params['min_taken_date'] = date_min
+        if date_max is not None:
+            params['max_taken_date'] = date_max
         r = urllib2.urlopen('http://api.flickr.com/services/rest/?%s'%urllib.urlencode(params))
         data = r.read()
         response = json.loads(data)
+
+        if response['stat'] == 'fail':
+            raise FlickrException(response['code'], response['message'])
+
         nPages = response['photos']['pages']
         logging.info('Page %d/%d'%(page, nPages))
        
@@ -57,7 +69,7 @@ def search(api_key, query, tag):
 
         page += 1
 
-def order(api_key, host, port, database, collection, query, tag):
+def order(api_key, host, port, database, collection, query, tag, min_date, max_date):
     logging.info(query)
 
     client = pymongo.MongoClient(host, port)
@@ -74,12 +86,15 @@ def order(api_key, host, port, database, collection, query, tag):
     collection.create_index('photo_expires')
     collection.create_index('focal_hint_expires')
  
-    for batch in split_every(500, search(api_key, query, tag)):
-        try:
-            collection.insert(batch, continue_on_error=True)
-        except pymongo.errors.DuplicateKeyError:
-            pass
-   
+    try:
+        for batch in split_every(500, search(api_key, query, tag, min_date, max_date)):
+            try:
+                logging.info('%d entries'%len(batch))
+                collection.insert(batch, continue_on_error=True)
+            except pymongo.errors.DuplicateKeyError:
+                pass
+    except FlickrException, e:
+        logging.info('ERROR: %s'%e) 
 
 if __name__ == '__main__':
     logging.basicConfig(level=logging.INFO)
@@ -88,6 +103,8 @@ if __name__ == '__main__':
     parser.add_argument('--config')
     parser.add_argument('--query', required=True)
     parser.add_argument('--tag', required=True)
+    parser.add_argument('--min-date')
+    parser.add_argument('--max-date')
     args = parser.parse_args()
 
     config = ConfigParser.ConfigParser()
@@ -103,4 +120,4 @@ if __name__ == '__main__':
     database = config.get('mongodb', 'database')
     collection = config.get('mongodb', 'collection')
 
-    order(api_key, host, port, database, collection, args.query, args.tag)
+    order(api_key, host, port, database, collection, args.query, args.tag, args.min_date, args.max_date)
