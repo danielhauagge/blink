@@ -4,7 +4,6 @@ from boto.s3.connection import S3Connection
 import pymongo
 
 import itertools
-import multiprocessing
 import logging
 import time
 import socket
@@ -40,19 +39,9 @@ if __name__ == '__main__':
             for task in tasks:
                 yield task
 
-    def closure(task):
-        try:
-            task(collection=collection, b=b, api_key=api_key)
-        except KeyboardInterrupt:
-            pass
-
-    pool = multiprocessing.Pool()
-    gen = task_generator()
-    N = 16 
     try:
-        while True:
-            g = pool.map(closure, itertools.islice(gen, N));
-            if not any(g):
-                time.sleep(2)
+        for task in task_generator():
+            task(collection=collection, b=b, api_key=api_key)
     except KeyboardInterrupt:
-        logging.info('Terminating manager')
+        pass
+ 
