@@ -48,7 +48,7 @@ if __name__ == '__main__':
 
     pool = multiprocessing.Pool()
     gen = task_generator()
-    N = 100
+    N = 16 
     try:
         while True:
             g = pool.map(closure, itertools.islice(gen, N));
