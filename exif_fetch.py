@@ -40,7 +40,7 @@ def get_exif(api_key, flickr_id):
             return {}, ''
 
         raise FlickrException(response['code'], response['message'])
-    tags = {tag['tag']:tag['raw']['_content'] for tag in response['photo']['exif']}
+    tags = {str(tag['tag']):tag['raw']['_content'] for tag in response['photo']['exif']}
     return tags, response['photo']['camera']
 
 
