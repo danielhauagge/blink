@@ -72,7 +72,7 @@ def focal_compute(collection, **kwargs):
         logging.info('CCD width: %s'%ccd_width)
 
         digital_zoom = exif.get('DigitalZoomRatio', None)
-        if digital_zoom is not None:
+        if digital_zoom is not None and digital_zoom != 'undef':
             digital_zoom = float(digital_zoom.split()[0])
         if digital_zoom == 0 or digital_zoom is None:
             digital_zoom = 1
