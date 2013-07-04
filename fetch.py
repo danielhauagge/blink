@@ -41,7 +41,8 @@ if __name__ == '__main__':
 
     try:
         for task in task_generator():
-            task(collection=collection, b=b, api_key=api_key)
+            if not task(collection=collection, b=b, api_key=api_key):
+                time.sleep(1)
     except KeyboardInterrupt:
         pass
  
