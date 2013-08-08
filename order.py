@@ -11,6 +11,7 @@ import pymongo
 import pymongo.errors
 from itertools import islice
 import Queue
+import time
 
 from common import *
 
@@ -54,8 +55,13 @@ def search(api_key, query, tag, date_min, date_max):
                 params['min_taken_date'] = date_range[0]
             if date_max is not None:
                 params['max_taken_date'] = date_range[1]
-            r = urllib2.urlopen('http://api.flickr.com/services/rest/?%s'%urllib.urlencode(params))
-            data = r.read()
+            try:
+                r = urllib2.urlopen('http://api.flickr.com/services/rest/?%s'%urllib.urlencode(params))
+                data = r.read()
+            except:
+                logging.info('Error')
+                time.sleep(10)
+                continue
             response = json.loads(data)
 
             if response['stat'] == 'fail':

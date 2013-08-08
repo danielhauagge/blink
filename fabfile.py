@@ -44,18 +44,15 @@ def hostname():
     run('hostname')
 
 def upgrade():
-    try:
-        run('ls blink')
-    except:
-        install()
-    with cd('blink'):
-        run('git pull')
-    configure()
+    install()
     stop()
     start()
 
 def install():
-    run('git clone https://github.com/kmatzen/blink.git')
+    try:
+        run('ls blink')
+    except:
+        run('git clone https://github.com/kmatzen/blink.git')
     configure()
 
 def configure():
@@ -79,27 +76,38 @@ def add_instance():
     while True:
         ready = True
    
-        for instance in reservation.instances:
-            status = instance.update()
-            if status == 'pending':
+        for r in conn.get_all_spot_instance_requests([s.id for s in reservation]):
+            print('Code: %s'%r.status.code)
+            print('Update time: %s'%r.status.update_time)
+            print('Message: %s'%r.status.message)
+            if r.status.code != 'fulfilled':
                 ready = False
 
         time.sleep(1)
+
+        if ready == True:
+            break
 
     existing = set()
 
     name_matcher = re.compile('blink slave (\d+)')
     for instance in instances:
         name = instance.tags['Name']
-        groups = name_matcher.match(name)
+        groups = name_matcher.match(name).groups()
         num = int(groups[0])
         existing.add(num)
 
-    for instance in reservation.instances:
-        for num in xrange(len(existing)+1):
-            if num not in existing:
-                new_name = 'blink slave %d'%num
-                existing.add(num)
+    for r in conn.get_all_spot_instance_requests([s.id for s in reservation]):
+        instance_id = r.instance_id
+        reservations = conn.get_all_instances(instance_id)
+        for reservation in reservations:
+            for instance in reservation.instances:
+                for num in xrange(len(existing)+1):
+                    if num not in existing:
+                        new_name = 'blink slave %d'%num
+                        existing.add(num)
+                        break
 
-        if instance.status == 'running':
-             instance.add_tag('Name', new_name)
+                if instance.state == 'running':
+                     instance.add_tag('Name', new_name)
+                print('New node named %s'%new_name)
