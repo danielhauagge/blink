@@ -23,6 +23,9 @@ def search(api_key, query, tag, date_min, date_max):
     page = 1
     nPages = 1
 
+    previous_count = 0
+    ids = set()
+
     while page <= nPages:
         params = {
             'method'            :   'flickr.photos.search',
@@ -33,7 +36,7 @@ def search(api_key, query, tag, date_min, date_max):
             'page'              :   page,
             'per_page'          :   500,
             'extras'            :   'description,date_taken,owner_name,geo_tags',
-            'license'           :   '4,7',
+            #'license'           :   '4,7',
             'privacy_filter'    :   1,
             'safe_search'       :   3,
             'content_type'      :   6,
@@ -55,6 +58,7 @@ def search(api_key, query, tag, date_min, date_max):
         assert response['photos']['page'] == page
  
         for photo in response['photos']['photo']:
+            ids.add(photo['id'])
             photo_obj = {
                 '_id'                   :   photo['id'],
                 'title'                 :   photo['title'],
@@ -66,6 +70,13 @@ def search(api_key, query, tag, date_min, date_max):
                 'tag'                   :   tag,
             }
             yield photo_obj
+
+        logging.info('%d files'%len(ids))
+        if len(ids) == previous_count:
+            logging.info('No more photos found')
+            return
+
+        previous_count = len(ids)
 
         page += 1
 

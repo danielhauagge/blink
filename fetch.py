@@ -35,6 +35,8 @@ if __name__ == '__main__':
             tasks = [(t, max(0,c-1)) for t,c in tasks]
             tasks.sort(key=lambda k: k[1])
             task = tasks[0]
+            if task[1] > 0:
+                time.sleep(1)
             tasks[0] = (task[0], task[1]+len(tasks))
             try:
                 if not task[0](collection=collection, b=b, api_key=api_key):
