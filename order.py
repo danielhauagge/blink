@@ -60,7 +60,7 @@ def search(api_key, query, tag, date_min, date_max):
                 'title'                 :   photo['title'],
                 'owner'                 :   photo['owner'],
                 'datetaken'             :   photo['datetaken'],
-                'description'           :   photo['description'],
+                'description'           :   photo['description']['_content'],
                 'datetakengranularity'  :   photo['datetakengranularity'],
                 'ownername'             :   photo['ownername'],
                 'tag'                   :   tag,

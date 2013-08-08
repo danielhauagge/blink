@@ -3,17 +3,18 @@
 from boto.s3.connection import S3Connection
 import pymongo
 
-import itertools
 import logging
 import time
+from email.mime.text import MIMEText
+import os
 import socket
 
-from exif_fetch import exif_fetch
-from photo_fetch import photo_fetch
-from sift_compute import sift_compute
-from focal_compute import focal_compute
-
 from common import *
+
+def build_task(task):
+    print('Importing %s'%task)
+    module = __import__(task)
+    return getattr(module, task)
 
 if __name__ == '__main__':
     logging.basicConfig(level=logging.INFO)
@@ -27,22 +28,36 @@ if __name__ == '__main__':
     b = s3conn.get_bucket(config.bucket)
     api_key = config.api_key
 
-    def task_generator():
-        tasks = [
-            focal_compute, 
-            exif_fetch, 
-            photo_fetch, 
-            sift_compute,
-        ]
-
-        while True:
-            for task in tasks:
-                yield task
+    tasks = [(build_task(t),0) for t in config.tasks]
 
     try:
-        for task in task_generator():
-            if not task(collection=collection, b=b, api_key=api_key):
-                time.sleep(1)
+        while True:
+            tasks = [(t, max(0,c-1)) for t,c in tasks]
+            tasks.sort(key=lambda k: k[1])
+            task = tasks[0]
+            tasks[0] = (task[0], task[1]+len(tasks))
+            try:
+                if not task[0](collection=collection, b=b, api_key=api_key):
+                    tasks[0] = (task[0], task[1]+4*len(tasks)) 
+                
+            except Exception, exc:
+                logging.info(exc)
     except KeyboardInterrupt:
         pass
+    except Exception, Exc:
+        text = """
+            host: %s,
+            pid: %d,
+            error: %s
+        """%(socket.gethostname(), os.getpid(), Exc)
+        msg = MIMEText(text)
+        me = 'blink@%s'%(socket.gethostname())
+        you = 'kmatzen@gmail.com'
+        msg['Subject'] = 'blink failure'
+        msg['From'] = me
+        msg['To'] = you
+
+        s = smtplib.SMTP('localhost')
+        s.sendmail(me, [you], msg.as_string())
+        s.quit()
  
