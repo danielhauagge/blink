@@ -25,7 +25,7 @@ def get_exif(api_key, flickr_id):
         # Some errors should be hidden
         # I think the only case we don't want to handle is permission denied
         hide_error = {
-            1: False, # photo not found
+            1: True, # photo not found
             2: True, # permission denied
             100: False, # invalid api key
             105: False, # service currently unavailable
