@@ -47,6 +47,8 @@ def hostname():
 @task
 def upgrade():
     install()
+    with cd('blink'):
+        run('git pull')
     stop()
     start()
 
