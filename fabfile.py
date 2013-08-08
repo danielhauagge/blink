@@ -1,12 +1,13 @@
 #!/usr/bin/env python
 
+import time
 import boto.ec2
 import re
 import ConfigParser
 
 from fabric.api import *
 
-def find_blink_instances():
+def connect():
     config = ConfigParser.ConfigParser()
     config.read('blink.cfg')
 
@@ -18,6 +19,12 @@ def find_blink_instances():
         aws_access_key_id=aws_key,
         aws_secret_access_key=aws_secret,
     )
+
+    return conn
+
+def find_blink_instances():
+    conn = connect()
+
     reservations = conn.get_all_instances()
 
     name_matcher = re.compile('blink slave \d+')
@@ -63,3 +70,36 @@ def start():
 
 def status():
     run('ps aux|grep python')
+
+def add_instance():
+    env.hosts = ['localhost']
+    conn = connect()
+    reservation = conn.request_spot_instances(0.06, 'ami-42a6db2b', key_name='kmatzenvision', instance_type='m3.xlarge', availability_zone_group='us-east-1d', security_groups=['kmatzen'])
+    
+    while True:
+        ready = True
+   
+        for instance in reservation.instances:
+            status = instance.update()
+            if status == 'pending':
+                ready = False
+
+        time.sleep(1)
+
+    existing = set()
+
+    name_matcher = re.compile('blink slave (\d+)')
+    for instance in instances:
+        name = instance.tags['Name']
+        groups = name_matcher.match(name)
+        num = int(groups[0])
+        existing.add(num)
+
+    for instance in reservation.instances:
+        for num in xrange(len(existing)+1):
+            if num not in existing:
+                new_name = 'blink slave %d'%num
+                existing.add(num)
+
+        if instance.status == 'running':
+             instance.add_tag('Name', new_name)
