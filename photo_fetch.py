@@ -51,34 +51,31 @@ def photo_fetch(collection, b, api_key, **kwargs):
 
     if entry is not None:
         logging.info('START: %s filename'%entry['_id'])
-        try:
-            image_url, width, height = get_image_url(api_key, entry['_id'])
-            image = get_image(image_url)
-            k = Key(b)        
-            k.key = os.path.join(collection.name, image_url.split('/')[-1])
-            k.set_contents_from_string(image)
-            k.set_acl('public-read')
-            if height > width and height > 2400:
-                resize_ratio = 2400.0/height
-            elif height <= width and width > 2400:
-                resize_ratio = 2400.0/width
-            else:
-                resize_ratio = 1
+        image_url, width, height = get_image_url(api_key, entry['_id'])
+        image = get_image(image_url)
+        k = Key(b)        
+        k.key = os.path.join(collection.name, image_url.split('/')[-1])
+        k.set_contents_from_string(image)
+        k.set_acl('public-read')
+        if height > width and height > 2400:
+            resize_ratio = 2400.0/height
+        elif height <= width and width > 2400:
+            resize_ratio = 2400.0/width
+        else:
+            resize_ratio = 1
 
-            checkin(
-                collection,
-                entry['_id'],
-                {
-                    'filename':k.key,
-                    'width':int(resize_ratio*width),
-                    'height':int(resize_ratio*height),
-                },
-                'filename_expires',
-            )
-            logging.info('SUCCESS: %s filename'%entry['_id'])
-            return True
-        except FlickrException, e:
-            logging.info('ERROR: %s %s'%(entry['_id'],e))
+        checkin(
+            collection,
+            entry['_id'],
+            {
+                'filename':k.key,
+                'width':int(resize_ratio*width),
+                'height':int(resize_ratio*height),
+            },
+            'filename_expires',
+        )
+        logging.info('SUCCESS: %s filename'%entry['_id'])
+        return True
     return False
 
 if __name__ == '__main__':
