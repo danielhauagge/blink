@@ -11,10 +11,11 @@ import socket
 
 from common import *
 
-def build_task(task):
+def build_task(task, **kwargs):
     print('Importing %s'%task)
     module = __import__(task)
-    return getattr(module, task)
+    c = getattr(module, task)
+    return c(**kwargs)
 
 if __name__ == '__main__':
     logging.basicConfig(level=logging.INFO)
@@ -28,7 +29,7 @@ if __name__ == '__main__':
     b = s3conn.get_bucket(config.bucket)
     api_key = config.api_key
 
-    tasks = [(build_task(t),0) for t in config.tasks]
+    tasks = [(build_task(t, collection=collection, b=b, api_key=api_key),0) for t in config.tasks]
 
     try:
         while True:
@@ -39,7 +40,10 @@ if __name__ == '__main__':
                 time.sleep(1)
             tasks[0] = (task[0], task[1]+len(tasks))
             try:
-                if not task[0](collection=collection, b=b, api_key=api_key):
+                if task[0].next():
+                    task[0].run()
+                else:
+                    task[0].expire()
                     tasks[0] = (task[0], task[1]+4*len(tasks)) 
                 
             except Exception, exc:
