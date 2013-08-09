@@ -10,6 +10,3 @@ class Task:
 
     def run(self):
         raise NotImplementedException()
-
-    def expire(self):
-        raise NotImplementedException()

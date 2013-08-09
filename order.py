@@ -81,6 +81,8 @@ def search(api_key, query, tag, date_min, date_max):
             logging.info('Page %d/%d'%(page, nPages))
            
             #assert response['photos']['page'] == page
+
+            epoch = datetime.datetime.fromtimestamp(0)
      
             for photo in response['photos']['photo']:
                 ids.add(photo['id'])
@@ -93,6 +95,10 @@ def search(api_key, query, tag, date_min, date_max):
                     'datetakengranularity'  :   photo['datetakengranularity'],
                     'ownername'             :   photo['ownername'],
                     'tag'                   :   tag,
+                    'filename_expires'      :   epoch,
+                    'sift_expires'          :   epoch,
+                    'exif_expires'          :   epoch,
+                    'focal_hint_expires'    :   epoch,
                 }
                 yield photo_obj
 

@@ -45,9 +45,6 @@ class ExifTask(Task):
         tags = {str(tag['tag']):tag['raw']['_content'] for tag in response['photo']['exif']}
         return tags, response['photo']['camera']
 
-    def expire(self):
-        expire(self.collection, 'exif_expires')
-
     def next(self):
         self.entry = checkout(
             self.collection,

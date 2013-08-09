@@ -31,6 +31,8 @@ def find_blink_instances():
 
     for reservation in reservations:
         for instance in reservation.instances:
+            if instance.state != 'running':
+                continue
             if 'Name' in instance.tags:
                 if name_matcher.match(instance.tags['Name']) is not None:
                     yield instance
