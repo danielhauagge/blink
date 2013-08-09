@@ -116,17 +116,6 @@ def order(api_key, host, port, database, collection, query, tag, min_date, max_d
     client = pymongo.MongoClient(host, port)
     collection = client[database][collection]
 
-    collection.create_index('filename')
-    collection.create_index('exif')
-    collection.create_index('width')
-    collection.create_index('sift')
-    collection.create_index('height')
-    collection.create_index('camera')
-    collection.create_index('sift_expires')
-    collection.create_index('exif_expires')
-    collection.create_index('photo_expires')
-    collection.create_index('focal_hint_expires')
- 
     try:
         for batch in split_every(500, search(api_key, query, tag, min_date, max_date)):
             try:

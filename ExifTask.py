@@ -49,7 +49,6 @@ class ExifTask(Task):
         self.entry = checkout(
             self.collection,
             [],
-            ['exif', 'camera'],
             'exif_expires',
         )
 

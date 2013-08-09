@@ -43,7 +43,6 @@ class PhotoTask(Task):
         self.entry = checkout(
             self.collection,
             [],
-            ['filename'],
             'filename_expires',
         )
 
