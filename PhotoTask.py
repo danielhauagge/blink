@@ -39,9 +39,6 @@ class PhotoTask(Task):
         data = r.read()
         return data
 
-    def expire(self):
-        expire(self.collection, 'filename_expires')
-
     def next(self):
         self.entry = checkout(
             self.collection,

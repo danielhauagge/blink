@@ -59,7 +59,7 @@ def expire(collection, key):
 
 def checkout(collection, input_keys, output_keys, expires_key): 
     spec_input = {key:{'$exists':True} for key in input_keys}
-    spec_input[expires_key] = {'$exists':False}
+    spec_input[expires_key] = {'$lt':datetime.datetime.now()}
 
     spec_output = {'$or':[{key:{'$exists':False}} for key in output_keys]}
 
