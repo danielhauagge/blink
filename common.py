@@ -57,13 +57,9 @@ def expire(collection, key):
         multi=True,
     )
 
-def checkout(collection, input_keys, output_keys, expires_key): 
+def checkout(collection, input_keys, expires_key): 
     spec_input = {key:{'$exists':True} for key in input_keys}
-    spec_input[expires_key] = {'$lt':datetime.datetime.now()}
-
-    spec_output = {'$or':[{key:{'$exists':False}} for key in output_keys]}
-
-    query = {'$and':[spec_input, spec_output]}
+    query = {expires_key : {'$lt':datetime.datetime.now()}}
 
     update = {'$set':{expires_key:datetime.datetime.now()+datetime.timedelta(minutes=10)}}
 
@@ -80,7 +76,7 @@ def checkin(collection, entry_id, outputs, expires_key):
         {'_id':entry_id},
         {
             '$set':outputs,
-            '$unset':{expires_key:''},
+            '$set':{expires_key:datetime.datetime.fromtimestamp(100000000000)},
         }
     )
 
