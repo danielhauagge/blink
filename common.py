@@ -72,11 +72,12 @@ def checkout(collection, input_keys, expires_key):
     return entry
 
 def checkin(collection, entry_id, outputs, expires_key):
+    s = outputs
+    s[expires_key] = datetime.datetime.fromtimestamp(100000000000)
     collection.update(
         {'_id':entry_id},
         {
             '$set':outputs,
-            '$set':{expires_key:datetime.datetime.fromtimestamp(100000000000)},
         }
     )
 
