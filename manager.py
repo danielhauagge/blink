@@ -16,7 +16,7 @@ def terminate():
 if __name__ == '__main__':
     args = ['./fetch.py']
 
-    procs = [subprocess.Popen(args) for i in xrange(100*multiprocessing.cpu_count())]
+    procs = [subprocess.Popen(args) for i in xrange(200*multiprocessing.cpu_count())]
 
     atexit.register(terminate)
 
