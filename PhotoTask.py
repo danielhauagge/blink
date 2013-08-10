@@ -96,7 +96,11 @@ class PhotoTask(Task):
             checkin(
                 self.collection,
                 self.entry['_id'],
-                {},
+                {
+                    'filename':'',
+                    'width':0,
+                    'height':0,
+                },
                 'filename_expires',
             )
 
