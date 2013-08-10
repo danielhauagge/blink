@@ -58,8 +58,8 @@ def search(api_key, query, tag, date_min, date_max):
             try:
                 r = urllib2.urlopen('http://api.flickr.com/services/rest/?%s'%urllib.urlencode(params))
                 data = r.read()
-            except:
-                logging.info('Error')
+            except Exception, exc:
+                logging.info('Error: %s'%exc)
                 time.sleep(10)
                 continue
             response = json.loads(data)
@@ -86,21 +86,24 @@ def search(api_key, query, tag, date_min, date_max):
      
             for photo in response['photos']['photo']:
                 ids.add(photo['id'])
-                photo_obj = {
-                    '_id'                   :   photo['id'],
-                    'title'                 :   photo['title'],
-                    'owner'                 :   photo['owner'],
-                    'datetaken'             :   photo['datetaken'],
-                    'description'           :   photo['description']['_content'],
-                    'datetakengranularity'  :   photo['datetakengranularity'],
-                    'ownername'             :   photo['ownername'],
-                    'tag'                   :   tag,
-                    'filename_expires'      :   epoch,
-                    'sift_expires'          :   epoch,
-                    'exif_expires'          :   epoch,
-                    'focal_hint_expires'    :   epoch,
-                }
-                yield photo_obj
+                try:
+                    photo_obj = {
+                        '_id'                   :   photo['id'],
+                        'title'                 :   photo['title'],
+                        'owner'                 :   photo['owner'],
+                        'datetaken'             :   datetime.datetime.strptime(photo['datetaken'], '%Y-%m-%d %H:%M:%S'),
+                        'description'           :   photo['description']['_content'],
+                        'datetakengranularity'  :   photo['datetakengranularity'],
+                        'ownername'             :   photo['ownername'],
+                        'tag'                   :   tag,
+                        'filename_expires'      :   epoch,
+                        'sift_expires'          :   epoch,
+                        'exif_expires'          :   epoch,
+                        'focal_hint_expires'    :   epoch,
+                    }
+                    yield photo_obj
+                except Exception, exc:
+                    logging.info(exc)
 
             if len(ids) == previous_count:
                 logging.info('No more photos found')
