@@ -43,7 +43,6 @@ if __name__ == '__main__':
                 if task[0].next():
                     task[0].run()
                 else:
-                    task[0].expire()
                     tasks[0] = (task[0], task[1]+4*len(tasks)) 
                 
             except Exception, exc:
