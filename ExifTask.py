@@ -58,6 +58,11 @@ class ExifTask(Task):
         logging.info('START: %s exif'%self.entry['_id'])
         exif, camera = self._get_exif(self.entry['_id'])
 
+        for key in exif.keys():
+            if '.' in key:
+                v = exif.pop(key)
+                exif[key.replace('.', '_')] = v
+
         checkin(
             self.collection,
             self.entry['_id'],
