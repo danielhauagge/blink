@@ -41,16 +41,16 @@ if __name__ == '__main__':
                 bucket=bucket, 
                 api_key=api_key
             ),
-            timer=0
+            timer=pos
         ) 
-    for t in config.tasks]
+    for pos, t in enumerate(config.tasks)]
 
     try:
         while True:
             task_entries.sort(key=lambda k: k.timer)
         
             # sleep until the earliest task is ready
-            sleep_time = task_entries[0].timer
+            sleep_time = task_entries[0].timer-1
             if sleep_time > 0:
                 logger.info('sleeping %d seconds'%sleep_time)
                 time.sleep(sleep_time)
@@ -66,12 +66,20 @@ if __name__ == '__main__':
 
             assert task_entry.timer == 0
 
-            # assume the task will be successful and stick it at the end of the line
-            task_entries[0] = TaskEntry(
-                task=task_entry.task, 
-                timer=task_entry.timer+len(task_entries)
-            )
+            # assume the task will be successful and stick it in the first empty slot in line
+            for i in xrange(1, len(task_entries[1:])):
+                if task_entries[i].timer > i:
+                    task_entries[0] = TaskEntry(
+                        task=task_entry.task, 
+                        timer=i,
+                    )
 
+            if task_entries[0].timer == 0:
+                task_entries[0] = TaskEntry(
+                    task=task_entry.task, 
+                    timer=len(task_entries),
+                )
+ 
             try:
                 # if the task has work to do, do it
                 if task_entry.task.next():
