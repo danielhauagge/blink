@@ -1,10 +1,10 @@
 blink
 =====
-*blink* is a tool for making Flickr queries and post-processing images and their metadata.  Nodes are coordinates through mongodb.  New queries are made with the order.py script and stored in the database.  Each worker runs the fetch.py script which polls the database and processes the associated image by requesting the actual photo and metadata from Flickr as well as estimating the focal length in pixels and computing SIFT feature points.
+*blink* is a tool for making Flickr queries and post-processing images and their metadata.  Nodes are coordinated through mongodb.  New queries are made with the order.py script and stored in the database.  Each worker runs the fetch.py script which polls the database and processes the associated image by requesting the actual photo and metadata from Flickr as well as estimating the focal length in pixels and computing SIFT feature points.
 
 ----
 
-This tool is designed to be run on EC2 with an S3 bucket provisioned in a region where there are no additional bandwidth charges.  (e.g. EC2 North Virginia + S3 US Standard)  Transfer from internet to EC2 should not have additional bandwidth charges.  Transfer from S3 to internet does incur additional charges, but if you use the SIFT worker and transfer only the compressed keypoints, you will be transfering much less than if you were to transfer the images.
+This tool is designed to be run on EC2 with an S3 bucket provisioned in a region where there are no additional bandwidth charges.  (e.g. EC2 North Virginia + S3 US Standard)  Transfer from internet to EC2 should not have additional bandwidth charges.  Transfer from S3 to internet does incur additional charges.
 
 ----
 
@@ -95,7 +95,7 @@ security_group = # <optional for Fabric>
 tasks = PhotoTask,ExifTask,FocalTask,SiftTask # which tasks to run
 
 [admin]
-email = # your email address in case the fetch script is raises a fatal exception
+email = # your email address in case the fetch script raises a fatal exception
 ```
 
 Running
