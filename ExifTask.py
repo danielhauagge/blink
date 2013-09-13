@@ -4,7 +4,6 @@ import datetime
 import urllib
 import urllib2
 import json
-import logging
 
 import pymongo
 
@@ -55,7 +54,7 @@ class ExifTask(Task):
         return self.entry is not None
 
     def run(self):
-        logging.info('START: %s exif'%self.entry['_id'])
+        self.logger.info('START: %s exif'%self.entry['_id'])
         exif, camera = self._get_exif(self.entry['_id'])
 
         for key in exif.keys():
@@ -72,7 +71,7 @@ class ExifTask(Task):
             },
             'exif_expires',
         )
-        logging.info('SUCCESS: %s exif'%self.entry['_id'])
+        self.logger.info('SUCCESS: %s exif'%self.entry['_id'])
 
         self.entry = None
 
