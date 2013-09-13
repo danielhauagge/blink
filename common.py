@@ -11,12 +11,13 @@ class FlickrException(Exception):
 
 Config = namedtuple(
         'Config',
-        'api_key,host,port,database,collection,aws_key,aws_secret,bucket,tasks',
+        'api_key,host,port,database,collection,aws_key,aws_secret,bucket,tasks,email,log',
 )
         
 def load_config():
     parser = argparse.ArgumentParser()
     parser.add_argument('--config')
+    parser.add_argument('--log', default='WARNING')
     args = parser.parse_args()
 
     config = ConfigParser.ConfigParser()
@@ -38,6 +39,8 @@ def load_config():
 
     tasks = config.get('workers', 'tasks').split(',')
 
+    email = config.get('admin', 'email')
+
     return Config(
         api_key=api_key,
         host=host,
@@ -48,6 +51,8 @@ def load_config():
         aws_secret=aws_secret,
         bucket=bucket,
         tasks=tasks,
+        email=email,
+        log=args.log,
     )
 
 def expire(collection, key):
