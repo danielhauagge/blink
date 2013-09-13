@@ -11,7 +11,7 @@ class FlickrException(Exception):
 
 Config = namedtuple(
         'Config',
-        'api_key,host,port,database,collection,aws_key,aws_secret,bucket',
+        'api_key,host,port,database,collection,aws_key,aws_secret,bucket,tasks',
 )
         
 def load_config():
@@ -36,6 +36,8 @@ def load_config():
     aws_secret = config.get('aws', 'aws_secret')
     bucket = config.get('aws', 'bucket')
 
+    tasks = config.get('workers', 'tasks').split(',')
+
     return Config(
         api_key=api_key,
         host=host,
@@ -44,7 +46,8 @@ def load_config():
         collection=collection,
         aws_key=aws_key,
         aws_secret=aws_secret,
-        bucket=bucket
+        bucket=bucket,
+        tasks=tasks,
     )
 
 def expire(collection, key):
@@ -54,13 +57,9 @@ def expire(collection, key):
         multi=True,
     )
 
-def checkout(collection, input_keys, output_keys, expires_key): 
+def checkout(collection, input_keys, expires_key): 
     spec_input = {key:{'$exists':True} for key in input_keys}
-    spec_input[expires_key] = {'$exists':False}
-
-    spec_output = {'$or':[{key:{'$exists':False}} for key in output_keys]}
-
-    query = {'$and':[spec_input, spec_output]}
+    query = {expires_key : {'$lt':datetime.datetime.now()}}
 
     update = {'$set':{expires_key:datetime.datetime.now()+datetime.timedelta(minutes=10)}}
 
@@ -73,11 +72,12 @@ def checkout(collection, input_keys, output_keys, expires_key):
     return entry
 
 def checkin(collection, entry_id, outputs, expires_key):
+    s = outputs
+    s[expires_key] = datetime.datetime.fromtimestamp(100000000000)
     collection.update(
         {'_id':entry_id},
         {
             '$set':outputs,
-            '$unset':{expires_key:''},
         }
     )
 

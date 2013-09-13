@@ -1,5 +1,6 @@
 #!/usr/bin/env python
 
+import datetime
 import logging
 import urllib
 import urllib2
@@ -9,6 +10,8 @@ import json
 import pymongo
 import pymongo.errors
 from itertools import islice
+import Queue
+import time
 
 from common import *
 
@@ -20,54 +23,95 @@ def split_every(n, iterable):
         piece = list(islice(i, n))
 
 def search(api_key, query, tag, date_min, date_max):
-    page = 1
-    nPages = 1
+    date_ranges = Queue.Queue()
+    date_ranges.put((datetime.datetime.strptime(date_min, '%Y-%m-%d'), datetime.datetime.strptime(date_max, '%Y-%m-%d')))
 
-    while page <= nPages:
-        params = {
-            'method'            :   'flickr.photos.search',
-            'api_key'           :   api_key,
-            'text'              :   query,
-            'format'            :   'json',
-            'nojsoncallback'    :   1,
-            'page'              :   page,
-            'per_page'          :   500,
-            'extras'            :   'description,date_taken,owner_name,geo_tags',
-            'license'           :   '4,7',
-            'privacy_filter'    :   1,
-            'safe_search'       :   3,
-            'content_type'      :   6,
-        }
-        if date_min is not None:
-            params['min_taken_date'] = date_min
-        if date_max is not None:
-            params['max_taken_date'] = date_max
-        r = urllib2.urlopen('http://api.flickr.com/services/rest/?%s'%urllib.urlencode(params))
-        data = r.read()
-        response = json.loads(data)
+    while not date_ranges.empty():
+        date_range = date_ranges.get()
+        logging.info('%s --- %s'%date_range)
 
-        if response['stat'] == 'fail':
-            raise FlickrException(response['code'], response['message'])
+        page = 1
+        nPages = 1
 
-        nPages = response['photos']['pages']
-        logging.info('Page %d/%d'%(page, nPages))
-       
-        assert response['photos']['page'] == page
- 
-        for photo in response['photos']['photo']:
-            photo_obj = {
-                '_id'                   :   photo['id'],
-                'title'                 :   photo['title'],
-                'owner'                 :   photo['owner'],
-                'datetaken'             :   photo['datetaken'],
-                'description'           :   photo['description'],
-                'datetakengranularity'  :   photo['datetakengranularity'],
-                'ownername'             :   photo['ownername'],
-                'tag'                   :   tag,
+        previous_count = 0
+        ids = set()
+
+        while page <= nPages:
+            params = {
+                'method'            :   'flickr.photos.search',
+                'api_key'           :   api_key,
+                'text'              :   query,
+                'format'            :   'json',
+                'nojsoncallback'    :   1,
+                'page'              :   page,
+                'per_page'          :   500,
+                'extras'            :   'description,date_taken,owner_name,geo_tags',
+                #'license'           :   '4,7',
+                'privacy_filter'    :   1,
+                'safe_search'       :   3,
+                'content_type'      :   6,
             }
-            yield photo_obj
+            if date_min is not None:
+                params['min_taken_date'] = date_range[0]
+            if date_max is not None:
+                params['max_taken_date'] = date_range[1]
+            try:
+                r = urllib2.urlopen('http://api.flickr.com/services/rest/?%s'%urllib.urlencode(params))
+                data = r.read()
+            except Exception, exc:
+                logging.info('Error: %s'%exc)
+                time.sleep(10)
+                continue
+            response = json.loads(data)
 
-        page += 1
+            if response['stat'] == 'fail':
+                raise FlickrException(response['code'], response['message'])
+
+            nPages = response['photos']['pages']
+
+            if nPages > 7:
+                logging.info('Too many pages.  Splitting date range.')
+                mid = (date_range[1] - date_range[0])/2 + date_range[0]
+                date_ranges.put((date_range[0], mid))
+                date_ranges.put((mid, date_range[1]))
+                nPages = 0
+                continue
+                
+
+            logging.info('Page %d/%d'%(page, nPages))
+           
+            #assert response['photos']['page'] == page
+
+            epoch = datetime.datetime.fromtimestamp(0)
+     
+            for photo in response['photos']['photo']:
+                ids.add(photo['id'])
+                try:
+                    photo_obj = {
+                        '_id'                   :   photo['id'],
+                        'title'                 :   photo['title'],
+                        'owner'                 :   photo['owner'],
+                        'datetaken'             :   datetime.datetime.strptime(photo['datetaken'], '%Y-%m-%d %H:%M:%S'),
+                        'description'           :   photo['description']['_content'],
+                        'datetakengranularity'  :   photo['datetakengranularity'],
+                        'ownername'             :   photo['ownername'],
+                        'tag'                   :   tag,
+                        'filename_expires'      :   epoch,
+                        'sift_expires'          :   epoch,
+                        'exif_expires'          :   epoch,
+                        'focal_hint_expires'    :   epoch,
+                    }
+                    yield photo_obj
+                except Exception, exc:
+                    logging.info(exc)
+
+            if len(ids) == previous_count:
+                logging.info('No more photos found')
+                break
+
+            previous_count = len(ids)
+
+            page += 1
 
 def order(api_key, host, port, database, collection, query, tag, min_date, max_date):
     logging.info(query)
@@ -75,21 +119,9 @@ def order(api_key, host, port, database, collection, query, tag, min_date, max_d
     client = pymongo.MongoClient(host, port)
     collection = client[database][collection]
 
-    collection.create_index('filename')
-    collection.create_index('exif')
-    collection.create_index('width')
-    collection.create_index('sift')
-    collection.create_index('height')
-    collection.create_index('camera')
-    collection.create_index('sift_expires')
-    collection.create_index('exif_expires')
-    collection.create_index('photo_expires')
-    collection.create_index('focal_hint_expires')
- 
     try:
         for batch in split_every(500, search(api_key, query, tag, min_date, max_date)):
             try:
-                logging.info('%d entries'%len(batch))
                 collection.insert(batch, continue_on_error=True)
             except pymongo.errors.DuplicateKeyError:
                 pass
