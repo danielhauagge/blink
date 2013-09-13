@@ -13,13 +13,6 @@ from common import *
 with open('cameras.json', 'r') as f:
     ccd_widths = json.load(f)
 
-focal_plane_resolution_unit_converter = {
-    'inches': 25.4,
-    'cm': 10,
-    'mm': 1,
-    'um': 0.001,
-}
-
 def focal_compute(collection, **kwargs):
     expire(collection, 'focal_hint_expires')
 
@@ -40,15 +33,6 @@ def focal_compute(collection, **kwargs):
         if focal_length is not None:
             focal_mm = float(focal_length.split()[0])
         logging.info('Focal mm: %s'%focal_mm)
-        focal_plane_xres = exif.get('FocalPlaneXResolution', None)
-        if focal_plane_xres is not None:
-            focal_plane_xres = float(focal_plane_xres)
-        exif_image_width = exif.get('ExifImageWidth', None)
-        focal_plane_resolution_unit = exif.get('FocalPlaneResolutionUnit', None)
-        focal_plane_units = focal_plane_resolution_unit_converter.get(focal_plane_resolution_unit, None)
-        ccd_width_exif = None
-        if focal_plane_xres is not None and exif_image_width is not None:
-            ccd_width_exif = exif_image_width*focal_plane_units/focal_plane_xres;
         logging.info('CCD width EXIF: %s'%ccd_width_exif)
 
         make_model = '%s %s'%(make, model)
