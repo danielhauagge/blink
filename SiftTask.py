@@ -38,9 +38,9 @@ class SiftTask (Task):
 
     def run (self):
         self.logger.info('START: %s sift'%self.entry['_id'])
-        kin = Key(self.b)
+        kin = Key(self.bucket)
         kin.key = self.entry['filename']
-        kout = Key(self.b)
+        kout = Key(self.bucket)
         splitext = os.path.splitext(self.entry['filename'])
         kout.key = '%s.key.gz'%splitext[0]
         with tempfile.NamedTemporaryFile(suffix=splitext[1], delete=False) as f:

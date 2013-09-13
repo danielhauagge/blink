@@ -1,9 +1,9 @@
 import logging
 
 class Task (object):
-    def __init__(self, api_key, b, collection):
+    def __init__(self, api_key, bucket, collection):
         self.api_key = api_key
-        self.b = b
+        self.bucket = bucket
         self.collection = collection
         self.entry = None
 
