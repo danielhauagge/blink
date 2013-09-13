@@ -1,8 +1,22 @@
+import time
 import logging
 import datetime
 import argparse
 import ConfigParser
 from collections import namedtuple
+
+LAST_FLICKR_TIME = datetime.datetime.now()
+
+def rate_limiter():
+    global LAST_FLICKR_TIME
+
+    second = datetime.timedelta(seconds=1)
+    time_diff = datetime.datetime.now() - LAST_FLICKR_TIME
+    if time_diff < second:
+        wait_time = (second - time_diff).total_seconds()
+        print('Rate limiting - sleeping %f seconds'%wait_time)
+        time.sleep(wait_time)
+    LAST_FLICKR_TIME = datetime.datetime.now()
 
 class FlickrException(Exception): 
     def __init__(self, code, message):
@@ -11,7 +25,7 @@ class FlickrException(Exception):
 
 Config = namedtuple(
         'Config',
-        'api_key,host,port,database,collection,aws_key,aws_secret,bucket,tasks,email,log',
+        'api_key,host,port,database,collection,aws_key,aws_secret,bucket,tasks,email,log,rate_limit',
 )
         
 def load_config():
@@ -27,6 +41,7 @@ def load_config():
         config.read(args.config)
 
     api_key = config.get('flickr', 'api_key')
+    rate_limit = config.get('flickr', 'rate_limit')
 
     host = config.get('mongodb', 'host')
     port = config.getint('mongodb', 'port')
@@ -53,6 +68,7 @@ def load_config():
         tasks=tasks,
         email=email,
         log=args.log,
+        rate_limit=rate_limit,
     )
 
 def expire(collection, key):

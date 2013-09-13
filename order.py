@@ -23,8 +23,13 @@ def split_every(n, iterable):
         piece = list(islice(i, n))
 
 def search(api_key, query, tag, date_min, date_max):
+    if date_min is not None:
+        date_min = datetime.datetime.strptime(date_min, '%Y-%m-%d')
+    if date_max is not None:
+        date_max = datetime.datetime.strptime(date_max, '%Y-%m-%d')
+
     date_ranges = Queue.Queue()
-    date_ranges.put((datetime.datetime.strptime(date_min, '%Y-%m-%d'), datetime.datetime.strptime(date_max, '%Y-%m-%d')))
+    date_ranges.put((date_min, date_max))
 
     while not date_ranges.empty():
         date_range = date_ranges.get()
@@ -69,7 +74,7 @@ def search(api_key, query, tag, date_min, date_max):
 
             nPages = response['photos']['pages']
 
-            if nPages > 7:
+            if nPages > 7 and date_range[0] is not None and date_range[1] is not None:
                 logging.info('Too many pages.  Splitting date range.')
                 mid = (date_range[1] - date_range[0])/2 + date_range[0]
                 date_ranges.put((date_range[0], mid))
@@ -79,7 +84,8 @@ def search(api_key, query, tag, date_min, date_max):
                 
 
             logging.info('Page %d/%d'%(page, nPages))
-           
+          
+            # Apparently this can't be trusted 
             #assert response['photos']['page'] == page
 
             epoch = datetime.datetime.fromtimestamp(0)
@@ -105,6 +111,8 @@ def search(api_key, query, tag, date_min, date_max):
                 except Exception, exc:
                     logging.info(exc)
 
+            # This happens in the case where there are more than 4000
+            # photos in the date range, but bisection is not possible
             if len(ids) == previous_count:
                 logging.info('No more photos found')
                 break

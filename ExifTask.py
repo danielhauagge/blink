@@ -19,6 +19,10 @@ class ExifTask(Task):
             'nojsoncallback'    :   1,
             'photo_id'          :   flickr_id,
         }
+
+        if self.rate_limit:
+            rate_limiter()
+
         r = urllib2.urlopen('http://api.flickr.com/services/rest/?%s'%urllib.urlencode(params))
         data = r.read()
         response = json.loads(data)
