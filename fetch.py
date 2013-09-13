@@ -32,6 +32,7 @@ if __name__ == '__main__':
     s3conn = S3Connection(config.aws_key, config.aws_secret)
     bucket = s3conn.get_bucket(config.bucket)
     api_key = config.api_key
+    rate_limit = config.rate_limit
 
     task_entries = [
         TaskEntry(
@@ -39,7 +40,8 @@ if __name__ == '__main__':
                 t, 
                 collection=collection, 
                 bucket=bucket, 
-                api_key=api_key
+                api_key=api_key,
+                rate_limit=rate_limit,
             ),
             timer=pos
         ) 
