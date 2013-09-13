@@ -83,7 +83,23 @@ def status():
 @hosts('localhost')
 def add_instance():
     conn = connect()
-    reservation = conn.request_spot_instances(0.06, 'ami-42a6db2b', key_name='kmatzenvision', instance_type='m3.xlarge', availability_zone_group='us-east-1d', security_groups=['kmatzen'])
+    config = ConfigParser.ConfigParser()
+    config.read('blink.cfg')
+    ami = config.get('aws', 'ami')
+    spot_price = config.getfloat('aws', 'spot_price')
+    key_name = config.get('aws', 'key_name')
+    instance_type = config.get('aws', 'instance_type')
+    availability_zone_group = config.get('aws', 'availability_zone_group')
+    security_group = config.get('aws', 'security_group')
+
+    reservation = conn.request_spot_instances(
+        spot_price, 
+        ami, 
+        key_name=key_name, 
+        instance_type=instance_type, 
+        availability_zone_group=availability_zone_group, 
+        security_groups=[security_group]
+    )
    
     spot_ids = [s.id for s in reservation]
  
