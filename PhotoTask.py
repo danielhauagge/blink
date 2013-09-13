@@ -50,7 +50,7 @@ class PhotoTask(Task):
         try:
             image_url, width, height = self._get_image_url(self.entry['_id'])
             image = self._get_image(image_url)
-            k = Key(self.b)
+            k = Key(self.bucket)
 
             # Certain photo sizes have this query string at the end 
             k.key = os.path.join(self.collection.name, image_url.split('/')[-1].replace('?zz=1', ''))

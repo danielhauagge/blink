@@ -30,12 +30,17 @@ if __name__ == '__main__':
     collection = client[config.database][config.collection]
 
     s3conn = S3Connection(config.aws_key, config.aws_secret)
-    b = s3conn.get_bucket(config.bucket)
+    bucket = s3conn.get_bucket(config.bucket)
     api_key = config.api_key
 
     task_entries = [
         TaskEntry(
-            task=build_task(t, collection=collection, b=b, api_key=api_key),
+            task=build_task(
+                t, 
+                collection=collection, 
+                bucket=bucket, 
+                api_key=api_key
+            ),
             timer=0
         ) 
     for t in config.tasks]
