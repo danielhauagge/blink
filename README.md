@@ -72,10 +72,11 @@ blink.cfg
 ```yaml
 [flickr]
 api_key = # Sign up for a Flickr API key
+rate_limit = True # Limit Flickr API queries per second to 1
 
 [mongodb]
-host = # Server on which mongodb is running
-port = 27017 # port
+host = foo.com # Server on which mongodb is running
+port = 27017
 database = flickr # database name that you created before
 collection = # where you want to store the data
 
@@ -83,6 +84,18 @@ collection = # where you want to store the data
 aws_key = # Sign up for an account with Amazon
 aws_secret = # and get the key too
 bucket = blink # Images and SIFT results are stored at http://s3.amazonaws.com/<bucket>/<collection>/<photo>
+ami = # <optional for Fabric>
+spot_price = # <optional for Fabric>
+key_name = # <optional for Fabric>
+instance_type = # <optional for Fabric>
+availability_zone_group = # <optional for Fabric>
+security_group = # <optional for Fabric>
+
+[workers]
+tasks = PhotoTask,ExifTask,FocalTask,SiftTask # which tasks to run
+
+[admin]
+email = # your email address in case the fetch script is raises a fatal exception
 ```
 
 Running
