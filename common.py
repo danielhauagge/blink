@@ -41,7 +41,7 @@ def load_config():
         config.read(args.config)
 
     api_key = config.get('flickr', 'api_key')
-    rate_limit = config.get('flickr', 'rate_limit')
+    rate_limit = config.getboolean('flickr', 'rate_limit')
 
     host = config.get('mongodb', 'host')
     port = config.getint('mongodb', 'port')
