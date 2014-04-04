@@ -81,7 +81,7 @@ def status():
 
 @task
 @hosts('localhost')
-def add_instance():
+def add_instance(count):
     conn = connect()
     config = ConfigParser.ConfigParser()
     config.read('blink.cfg')
@@ -95,6 +95,7 @@ def add_instance():
     reservation = conn.request_spot_instances(
         spot_price, 
         ami, 
+        count=count,
         key_name=key_name, 
         instance_type=instance_type, 
         availability_zone_group=availability_zone_group, 
