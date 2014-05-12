@@ -38,9 +38,6 @@ def search(api_key, query, tag, date_min, date_max):
         page = 1
         nPages = 1
 
-        previous_count = 0
-        ids = set()
-
         while page <= nPages:
             params = {
                 'method'            :   'flickr.photos.search',
@@ -61,6 +58,8 @@ def search(api_key, query, tag, date_min, date_max):
             if date_max is not None:
                 params['max_taken_date'] = date_range[1]
             try:
+                logging.info('Requesting page %d (%s - %s)'%(page, date_range[0], date_range[1]))
+                #rate_limiter()
                 r = urllib2.urlopen('http://api.flickr.com/services/rest/?%s'%urllib.urlencode(params))
                 data = r.read()
             except Exception, exc:
@@ -71,6 +70,10 @@ def search(api_key, query, tag, date_min, date_max):
 
             if response['stat'] == 'fail':
                 raise FlickrException(response['code'], response['message'])
+
+            if response['photos']['pages'] == 0:
+                time.sleep(10)
+                continue
 
             nPages = response['photos']['pages']
 
@@ -91,7 +94,6 @@ def search(api_key, query, tag, date_min, date_max):
             epoch = datetime.datetime.fromtimestamp(0)
      
             for photo in response['photos']['photo']:
-                ids.add(photo['id'])
                 try:
                     photo_obj = {
                         '_id'                   :   photo['id'],
@@ -110,14 +112,6 @@ def search(api_key, query, tag, date_min, date_max):
                     yield photo_obj
                 except Exception, exc:
                     logging.info(exc)
-
-            # This happens in the case where there are more than 4000
-            # photos in the date range, but bisection is not possible
-            if len(ids) == previous_count:
-                logging.info('No more photos found')
-                break
-
-            previous_count = len(ids)
 
             page += 1
 
