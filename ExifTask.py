@@ -23,7 +23,7 @@ class ExifTask(Task):
         if self.rate_limit:
             rate_limiter()
 
-        r = urllib2.urlopen('http://api.flickr.com/services/rest/?%s'%urllib.urlencode(params))
+        r = urllib2.urlopen('https://api.flickr.com/services/rest/?%s'%urllib.urlencode(params))
         data = r.read()
         response = json.loads(data)
         if response['stat'] == 'fail':
