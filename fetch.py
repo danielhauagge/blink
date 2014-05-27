@@ -1,11 +1,12 @@
 #!/usr/bin/env python
 
+import multiprocessing
 from boto.s3.connection import S3Connection
 import pymongo
 
+from threading import Thread
 import logging
 import time
-from email.mime.text import MIMEText
 import os
 import socket
 from collections import namedtuple
@@ -20,20 +21,22 @@ def build_task(task, **kwargs):
 
 TaskEntry = namedtuple('TaskEntry', 'task,timer')
 
-if __name__ == '__main__':
-    config = load_config()
+config = load_config()
 
-    logging.basicConfig(level=getattr(logging, config.log.upper()))
-    logger = logging.getLogger('fetch')
+logging.basicConfig(level=getattr(logging, config.log.upper()))
+logger = logging.getLogger('fetch')
 
-    client = pymongo.MongoClient(config.host, config.port)
-    collection = client[config.database][config.collection]
+client = pymongo.MongoClient(config.host, config.port, auto_start_request=False, max_pool_size=None)
 
-    s3conn = S3Connection(config.aws_key, config.aws_secret)
-    bucket = s3conn.get_bucket(config.bucket)
-    api_key = config.api_key
-    rate_limit = config.rate_limit
+collection = client[config.database][config.collection]
 
+s3conn = S3Connection(config.aws_key, config.aws_secret)
+bucket = s3conn.get_bucket(config.bucket)
+api_key = config.api_key
+rate_limit = config.rate_limit
+
+
+def run():
     task_entries = [
         TaskEntry(
             task=build_task(
@@ -56,7 +59,6 @@ if __name__ == '__main__':
             if sleep_time > 0:
                 logger.info('sleeping %d seconds'%sleep_time)
                 time.sleep(sleep_time)
-
             # Update task timers
             task_entries = [
                 TaskEntry(
@@ -84,12 +86,15 @@ if __name__ == '__main__':
  
             try:
                 # if the task has work to do, do it
+                logging.info(task_entry.task)
                 if task_entry.task.next():
+                    logging.info('here a')
                     logger.info(task_entry.task.__class__.__name__)
                     task_entry.task.run()
 
                 # otherwise stick it even further back in the line
                 else:
+                    logging.info('here b')
                     logger.info('Postponing: %s'%task_entry.task.__class__.__name__)
                     task_entries[0] = TaskEntry(
                         task=task_entry.task, 
@@ -103,20 +108,15 @@ if __name__ == '__main__':
         pass
 
     # send me an email if the script dies
-    except Exception, Exc:
-        text = """
-            host: %s,
-            pid: %d,
-            error: %s
-        """%(socket.gethostname(), os.getpid(), Exc)
-        msg = MIMEText(text)
-        me = 'blink@%s'%(socket.gethostname())
-        you = config.email
-        msg['Subject'] = 'blink failure'
-        msg['From'] = me
-        msg['To'] = you
-
-        s = smtplib.SMTP('localhost')
-        s.sendmail(me, [you], msg.as_string())
-        s.quit()
+    except Exception:
+        raise
  
+if __name__ == '__main__':
+    threads = [Thread(target=run) for _ in xrange(multiprocessing.cpu_count() * 8)]
+
+    for thread in threads:
+        thread.start()
+
+    for thread in threads:
+        thread.join()
+
