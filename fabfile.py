@@ -73,7 +73,7 @@ def stop():
 @task
 def start():
     with cd('blink'):
-        run('tmux new-session -d -s blink ./manager.py', pty=False)
+        run('tmux new-session -d -s blink ./fetch.py', pty=False)
 
 @task
 def status():
@@ -106,16 +106,19 @@ def add_instance(count):
  
     while True:
         ready = True
-   
-        for r in conn.get_all_spot_instance_requests(spot_ids):
-            print('Code: %s'%r.status.code)
-            print('Update time: %s'%r.status.update_time)
-            print('Message: %s'%r.status.message)
-            if r.status.code != 'fulfilled':
-                ready = False
+  
+        try: 
+            for r in conn.get_all_spot_instance_requests(spot_ids):
+                print('Code: %s'%r.status.code)
+                print('Update time: %s'%r.status.update_time)
+                print('Message: %s'%r.status.message)
+                if r.status.code != 'fulfilled':
+                    ready = False
 
-        if ready:
-            break
+            if ready:
+                break
+        except:
+            pass
 
         time.sleep(1)
 
