@@ -26,7 +26,9 @@ config = load_config()
 logging.basicConfig(level=getattr(logging, config.log.upper()))
 logger = logging.getLogger('fetch')
 
-client = pymongo.MongoClient(config.host, config.port, auto_start_request=False, max_pool_size=None)
+name = '%s:%d'%(config.host, config.port)
+logging.info(name)
+client = pymongo.MongoReplicaSetClient(name, auto_start_request=False, max_pool_size=None, replicaset='rs0', read_preference=pymongo.read_preferences.ReadPreference.PRIMARY_PREFERRED)
 
 collection = client[config.database][config.collection]
 
