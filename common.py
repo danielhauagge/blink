@@ -98,7 +98,7 @@ def checkout(collection, input_keys, expires_key):
         entry = collection.find_and_modify(
             query=query,
             update=update,
-            fields=input_keys+['_id']+[expires_key],
+            fields=input_keys+['_id'],
         )
         del query['_id']
 
