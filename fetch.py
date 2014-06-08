@@ -1,10 +1,12 @@
 #!/usr/bin/env python
 
+import gevent
+from gevent import monkey; monkey.patch_all()
+
 import multiprocessing
 from boto.s3.connection import S3Connection
 import pymongo
 
-from threading import Thread
 import logging
 import time
 import os
@@ -114,11 +116,9 @@ def run():
         raise
  
 if __name__ == '__main__':
-    threads = [Thread(target=run) for _ in xrange(multiprocessing.cpu_count() * 8)]
+#    run()
+#    exit()
+    threads = [gevent.spawn(run) for _ in xrange(multiprocessing.cpu_count() * 8)]
 
-    for thread in threads:
-        thread.start()
-
-    for thread in threads:
-        thread.join()
+    gevent.joinall(threads)
 
