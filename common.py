@@ -84,7 +84,6 @@ def checkout(collection, input_keys, expires_key):
 
     update = {'$set':{expires_key:datetime.datetime.now()+datetime.timedelta(minutes=10)}}
 
-    """
     entry = collection.find_and_modify(
         query,
         update=update,
@@ -95,6 +94,7 @@ def checkout(collection, input_keys, expires_key):
         query,
         fields=input_keys+['_id'],
     )
+    """
 
     return entry
 
