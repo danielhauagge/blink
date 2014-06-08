@@ -80,21 +80,27 @@ def expire(collection, key):
 
 def checkout(collection, input_keys, expires_key): 
     spec_input = {key:{'$exists':True} for key in input_keys}
-    query = {expires_key : {'$lt':datetime.datetime.now()}}
+    query = {
+        expires_key : {'$lt':datetime.datetime.now()}
+    }
 
     update = {'$set':{expires_key:datetime.datetime.now()+datetime.timedelta(minutes=10)}}
 
-    entry = collection.find_and_modify(
-        query,
-        update=update,
-        fields=input_keys+['_id'],
-    )
     """
-    entry = collection.find_one(
-        query,
-        fields=input_keys+['_id'],
-    )
     """
+    entry = None
+    while entry is None:
+        entry = collection.find_one(
+            query,
+            fields=input_keys+['_id'],
+        )
+        query['_id'] = entry['_id']
+        entry = collection.find_and_modify(
+            query=query,
+            update=update,
+            fields=input_keys+['_id']+[expires_key],
+        )
+        del query['_id']
 
     return entry
 
