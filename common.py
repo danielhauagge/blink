@@ -1,3 +1,4 @@
+import random
 import time
 import logging
 import datetime
@@ -81,6 +82,7 @@ def expire(collection, key):
 def checkout(collection, input_keys, expires_key): 
     spec_input = {key:{'$exists':True} for key in input_keys}
     query = {
+        '_id':{'$gte':str(random.randint(0, 100000))},
         expires_key : {'$lt':datetime.datetime.now()}
     }
 
@@ -90,17 +92,21 @@ def checkout(collection, input_keys, expires_key):
     """
     entry = None
     while entry is None:
+        print('find one')
         entry = collection.find_one(
             query,
             fields=input_keys+['_id'],
         )
         query['_id'] = entry['_id']
+        print(entry['_id'])
         entry = collection.find_and_modify(
             query=query,
             update=update,
             fields=input_keys+['_id'],
         )
         del query['_id']
+        if entry is None:
+            print('retry')
 
     return entry
 
