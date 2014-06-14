@@ -31,7 +31,6 @@ logger = logging.getLogger('fetch')
 name = '%s:%d'%(config.host, config.port)
 logging.info(name)
 client = pymongo.MongoClient(name, auto_start_request=False, max_pool_size=None, read_preference=pymongo.read_preferences.ReadPreference.PRIMARY_PREFERRED)
-client.write_concern['w'] = 0
 
 collection = client[config.database][config.collection]
 
