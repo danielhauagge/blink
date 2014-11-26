@@ -11,7 +11,7 @@ This tool is designed to be run on EC2 with an S3 bucket provisioned in a region
 blink makes use of the following Flickr API calls:
 * [flickr.photos.search](http://www.flickr.com/services/api/flickr.photos.search.html)
 * [flickr.photos.getSizes](http://www.flickr.com/services/api/flickr.photos.getSizes.html)
-* [flickr.photos.getExif](http://www.flickr.com/services/api/flickr.photos.getExif.html) 
+* [flickr.photos.getExif](http://www.flickr.com/services/api/flickr.photos.getExif.html)
 
 Keep this in mind when configuring the number of workers you run at one time:
 
@@ -27,6 +27,8 @@ Base Setup
 ----
 ```shell
 sudo apt-get install git python-imaging python-boto python-numpy python-scipy python-pip
+sudo apt-get install libmagickwand-dev
+sudo pip install Wand
 sudo pip install pymongo
 git clone git@github.com:kmatzen/blink.git
 cd blink

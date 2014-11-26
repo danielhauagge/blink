@@ -12,6 +12,8 @@ import pymongo.errors
 from itertools import islice
 import Queue
 import time
+from os import path
+from urlparse import urlparse
 
 from common import *
 
@@ -21,6 +23,29 @@ def split_every(n, iterable):
     while piece:
         yield piece
         piece = list(islice(i, n))
+
+def get_id_from_url(url):
+    fname = path.basename(urlparse(url).path)
+    return fname.split('_')[0]
+
+def get_urls_from_file(fname, tag):
+    urls = open(fname).read().strip().split('\n')
+    logging.info('%d URLs in the file', len(urls))
+
+    epoch = datetime.datetime.fromtimestamp(0)
+
+    for url in urls:
+
+        photo_obj = {
+            '_id'                   :   get_id_from_url(url),
+            'tag'                   :   tag,
+            'url'                   :   url,
+            'filename_expires'      :   epoch,
+            'sift_expires'          :   epoch,
+            'exif_expires'          :   epoch,
+            'focal_hint_expires'    :   epoch,
+        }
+        yield photo_obj
 
 def search(api_key, query, tag, date_min, date_max):
     if date_min is not None:
@@ -60,7 +85,7 @@ def search(api_key, query, tag, date_min, date_max):
             try:
                 logging.info('Requesting page %d (%s - %s)'%(page, date_range[0], date_range[1]))
                 #rate_limiter()
-                r = urllib2.urlopen('http://api.flickr.com/services/rest/?%s'%urllib.urlencode(params))
+                r = urllib2.urlopen('https://api.flickr.com/services/rest/?%s'%urllib.urlencode(params))
                 data = r.read()
             except Exception, exc:
                 logging.info('Error: %s'%exc)
@@ -84,15 +109,15 @@ def search(api_key, query, tag, date_min, date_max):
                 date_ranges.put((mid, date_range[1]))
                 nPages = 0
                 continue
-                
+
 
             logging.info('Page %d/%d'%(page, nPages))
-          
-            # Apparently this can't be trusted 
+
+            # Apparently this can't be trusted
             #assert response['photos']['page'] == page
 
             epoch = datetime.datetime.fromtimestamp(0)
-     
+
             for photo in response['photos']['photo']:
                 try:
                     photo_obj = {
@@ -115,27 +140,33 @@ def search(api_key, query, tag, date_min, date_max):
 
             page += 1
 
-def order(api_key, host, port, database, collection, query, tag, min_date, max_date):
+def order(api_key, host, port, database, collection, query, tag, min_date, max_date, urls_fname):
     logging.info(query)
-
     client = pymongo.MongoClient(host, port)
     collection = client[database][collection]
 
     try:
-        for batch in split_every(500, search(api_key, query, tag, min_date, max_date)):
+        if query != None: get_next = search(api_key, query, tag, min_date, max_date)
+        elif urls_fname != None: get_next = get_urls_from_file(urls_fname, tag)
+        else: assert(False)
+
+        for batch in split_every(500, get_next):
             try:
+                print 'adding to mongo'
+                print 'collection', collection
                 collection.insert(batch, continue_on_error=True)
             except pymongo.errors.DuplicateKeyError:
                 pass
     except FlickrException, e:
-        logging.info('ERROR: %s'%e) 
+        logging.info('ERROR: %s'%e)
 
 if __name__ == '__main__':
     logging.basicConfig(level=logging.INFO)
 
     parser = argparse.ArgumentParser()
     parser.add_argument('--config')
-    parser.add_argument('--query', required=True)
+    parser.add_argument('--query')
+    parser.add_argument('--urls')
     parser.add_argument('--tag', required=True)
     parser.add_argument('--min-date')
     parser.add_argument('--max-date')
@@ -143,7 +174,7 @@ if __name__ == '__main__':
 
     config = ConfigParser.ConfigParser()
     if args.config is None:
-        config.read('blink.cfg')
+        config.read(path.expanduser('~/.blink'))
     else:
         config.read(args.config)
 
@@ -154,4 +185,4 @@ if __name__ == '__main__':
     database = config.get('mongodb', 'database')
     collection = config.get('mongodb', 'collection')
 
-    order(api_key, host, port, database, collection, args.query, args.tag, args.min_date, args.max_date)
+    order(api_key, host, port, database, collection, args.query, args.tag, args.min_date, args.max_date, args.urls)

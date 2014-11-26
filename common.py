@@ -19,7 +19,7 @@ def rate_limiter():
         time.sleep(wait_time)
     LAST_FLICKR_TIME = datetime.datetime.now()
 
-class FlickrException(Exception): 
+class FlickrException(Exception):
     def __init__(self, code, message):
         Exception.__init__(self, message)
         self.code = code
@@ -28,7 +28,7 @@ Config = namedtuple(
         'Config',
         'api_key,host,port,database,collection,aws_key,aws_secret,bucket,tasks,email,log,rate_limit',
 )
-        
+
 def load_config():
     parser = argparse.ArgumentParser()
     parser.add_argument('--config')
@@ -37,7 +37,8 @@ def load_config():
 
     config = ConfigParser.ConfigParser()
     if args.config is None:
-        config.read('blink.cfg')
+        from os import path
+        config.read(path.expanduser('~/.blink'))
     else:
         config.read(args.config)
 
@@ -79,7 +80,7 @@ def expire(collection, key):
         multi=True,
     )
 
-def checkout(collection, input_keys, expires_key): 
+def checkout(collection, input_keys, expires_key):
     spec_input = {key:{'$exists':True} for key in input_keys}
     query = {
         '_id':{'$gte':str(random.randint(0, 100000))},
@@ -92,13 +93,12 @@ def checkout(collection, input_keys, expires_key):
     """
     entry = None
     while entry is None:
-        print('find one')
         entry = collection.find_one(
             query,
             fields=input_keys+['_id'],
         )
         query['_id'] = entry['_id']
-        print(entry['_id'])
+
         entry = collection.find_and_modify(
             query=query,
             update=update,
@@ -121,4 +121,3 @@ def checkin(collection, entry_id, outputs, expires_key):
         },
     )
     print('end checkin')
-
