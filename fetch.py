@@ -32,11 +32,11 @@ config = load_config()
 logger = logging.getLogger('fetch')
 
 name = '%s:%s'%(config.get('mongodb','host'), config.get('mongodb','port'))
-logging.info(name)
+logger.info('MongoDB host: %s', name)
 client = pymongo.MongoClient(name, auto_start_request=False, max_pool_size=None,
     read_preference=pymongo.read_preferences.ReadPreference.PRIMARY_PREFERRED)
 
-logger.info('Connecting to MongoDB: %s:%s', config.get('mongodb','database'), config.get('mongodb','collection'))
+logger.info('MongoDB database: %s:%s', config.get('mongodb','database'), config.get('mongodb','collection'))
 collection = client[config.get('mongodb','database')][config.get('mongodb','collection')]
 
 logging.info('Conecting to AWS services')
