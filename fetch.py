@@ -16,6 +16,8 @@ from collections import namedtuple
 
 from common import *
 
+init_logger()
+
 def build_task(task, **kwargs):
     # print('Importing %s'%task)
     module = __import__(task)
@@ -63,7 +65,7 @@ def run():
             # sleep until the earliest task is ready
             sleep_time = task_entries[0].timer-1
             if sleep_time > 0:
-                logger.info('sleeping %d seconds'%sleep_time)
+                logger.info('sleeping %d seconds', sleep_time)
                 time.sleep(sleep_time)
             # Update task timers
             task_entries = [
@@ -91,15 +93,12 @@ def run():
 
             try:
                 # if the task has work to do, do it
-                logging.info(task_entry.task)
+                # logging.info(task_entry.task)
                 if task_entry.task.next():
-                    logging.info('here a')
-                    logger.info(task_entry.task.__class__.__name__)
                     task_entry.task.run()
 
                 # otherwise stick it even further back in the line
                 else:
-                    logging.info('here b')
                     logger.info('Postponing: %s', task_entry.task.__class__.__name__)
                     task_entries[0] = TaskEntry(
                         task=task_entry.task,
@@ -108,7 +107,8 @@ def run():
 
             # log transient errors locally
             except Exception, exc:
-                logger.info('%s: %s', task_entry.task.__class__.__name__, exc)
+                pass
+                #logger.info('%s: %s', task_entry.task.__class__.__name__, exc)
     except KeyboardInterrupt:
         pass
 

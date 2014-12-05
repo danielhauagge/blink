@@ -70,7 +70,7 @@ class PhotoTask(Task):
         self.logger.info('START: %s filename'%self.entry['_id'])
         try:
             image_url, _, _ = self._get_image_url(self.entry)
-            print image_url
+            self.logger.info('Downloading %s', image_url)
             image =  Image(blob = self._get_image(image_url))
             image.format = 'jpeg'
 
@@ -90,7 +90,6 @@ class PhotoTask(Task):
                 image.resize(int(round(width * scale)), int(round(height * scale)))
                 width = image.width
                 height = image.height
-                print 'width x height', width, 'x', height
 
                 # image = img_tmp.convert('RGB').tostring('jpeg', 'RGB', 0, 1)
 
@@ -141,6 +140,6 @@ class PhotoTask(Task):
             else:
                 raise
 
-        self.logger.info('SUCCESS: %s filename'%self.entry['_id'])
+        self.logger.info('SUCCESS: _id = %s'%self.entry['_id'])
 
         self.entry = None

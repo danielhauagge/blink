@@ -10,6 +10,14 @@ import os
 
 LAST_FLICKR_TIME = datetime.datetime.now()
 
+def init_logger():
+    '''Initialize the logger, call at the begining of main.
+    '''
+    logging.basicConfig(level=logging.INFO,
+                        format='[Blink] %(asctime)s %(levelname)5s: %(message)s',
+                        datefmt='%Y-%m-%d %H:%M:%S')
+    logging.addLevelName(logging.WARNING, 'WARN')
+
 def rate_limiter():
     global LAST_FLICKR_TIME
 

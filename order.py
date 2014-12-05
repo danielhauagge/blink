@@ -16,6 +16,7 @@ from os import path
 from urlparse import urlparse
 
 from common import *
+init_logger()
 
 def split_every(n, iterable):
     i = iter(iterable)
@@ -154,8 +155,6 @@ def order(api_key, host, port, database, collection, query, tag, min_date, max_d
 
         for batch in split_every(500, get_next):
             try:
-                print 'adding to mongo'
-                print 'collection', collection
                 collection.insert(batch, continue_on_error=True)
             except pymongo.errors.DuplicateKeyError:
                 pass
