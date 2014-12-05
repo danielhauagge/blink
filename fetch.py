@@ -29,17 +29,18 @@ config = load_config()
 # logging.basicConfig(level=getattr(logging, config.log.upper()))
 logger = logging.getLogger('fetch')
 
-name = '%s:%d'%(config.host, config.port)
+name = '%s:%s'%(config.get('mongodb','host'), config.get('mongodb','port'))
 logging.info(name)
-client = pymongo.MongoClient(name, auto_start_request=False, max_pool_size=None, read_preference=pymongo.read_preferences.ReadPreference.PRIMARY_PREFERRED)
+client = pymongo.MongoClient(name, auto_start_request=False, max_pool_size=None,
+    read_preference=pymongo.read_preferences.ReadPreference.PRIMARY_PREFERRED)
 
-collection = client[config.database][config.collection]
+collection = client[config.get('mongodb','database')][config.get('mongodb','collection')]
 
 logging.info('Conecting to AWS services')
-s3conn = S3Connection(config.aws_key, config.aws_secret)
-bucket = s3conn.get_bucket(config.bucket)
-api_key = config.api_key
-rate_limit = config.rate_limit
+s3conn = S3Connection(config.get('aws', 'aws_key'), config.get('aws','aws_secret'))
+bucket = s3conn.get_bucket(config.get('aws', 'bucket'))
+api_key = config.get('flickr','api_key')
+rate_limit = config.get('flickr','rate_limit')
 
 def run():
     task_entries = [
@@ -53,7 +54,7 @@ def run():
             ),
             timer=pos
         )
-    for pos, t in enumerate(config.tasks)]
+    for pos, t in enumerate(config.get('workers','tasks').split(','))]
 
     try:
         while True:
@@ -110,7 +111,7 @@ def run():
                 logger.info('%s: %s', task_entry.task.__class__.__name__, exc)
     except KeyboardInterrupt:
         pass
-    
+
     # send me an email if the script dies
     except Exception:
         raise

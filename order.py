@@ -141,6 +141,8 @@ def search(api_key, query, tag, date_min, date_max):
             page += 1
 
 def order(api_key, host, port, database, collection, query, tag, min_date, max_date, urls_fname):
+    print host, port
+
     logging.info(query)
     client = pymongo.MongoClient(host, port)
     collection = client[database][collection]

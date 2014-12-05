@@ -3,21 +3,25 @@
 import time
 import boto.ec2
 import re
-import ConfigParser
+import sys
+import os
+
+from common import load_config
 
 from fabric.api import *
 
+# http://examples.oreilly.com/0636920020202/ec2_launch_instance.py
+
 def connect():
-    config = ConfigParser.ConfigParser()
-    config.read('blink.cfg')
+    config = load_config() #ConfigParser.ConfigParser()
 
     aws_key = config.get('aws', 'aws_key')
     aws_secret = config.get('aws', 'aws_secret')
 
     conn = boto.ec2.connect_to_region(
         'us-east-1',
-        aws_access_key_id=aws_key,
-        aws_secret_access_key=aws_secret,
+        aws_access_key_id = aws_key,
+        aws_secret_access_key = aws_secret,
     )
 
     return conn
@@ -37,10 +41,11 @@ def find_blink_instances():
                 if name_matcher.match(instance.tags['Name']) is not None:
                     yield instance
 
+
 instances = list(find_blink_instances())
 env.user = 'ubuntu'
 env.hosts = [i.public_dns_name for i in instances]
-env.key_filename = '/home/kmatzen/kmatzenvision.pem'
+env.key_filename = os.path.expanduser(load_config().get('ssh','identity_file'))
 
 @task
 def hostname():
@@ -56,15 +61,16 @@ def upgrade():
 
 @task
 def install():
+    config = load_config()
     try:
         run('ls blink')
     except:
-        run('git clone https://github.com/kmatzen/blink.git')
+        run('git clone ' + config.get('blink', 'repository'))
     configure()
 
 @task
 def configure():
-    put('blink.cfg', 'blink/blink.cfg')
+    put('~/.blink', '~/.blink')
 
 @task
 def stop():
@@ -77,37 +83,42 @@ def start():
 
 @task
 def status():
-    run('ps aux|grep python')
+    run('ps aux | grep python')
 
 @task
 @hosts('localhost')
 def add_instance(count):
     conn = connect()
-    config = ConfigParser.ConfigParser()
-    config.read('blink.cfg')
+    config = load_config()
+
     ami = config.get('aws', 'ami')
     spot_price = config.getfloat('aws', 'spot_price')
     key_name = config.get('aws', 'key_name')
     instance_type = config.get('aws', 'instance_type')
     availability_zone_group = config.get('aws', 'availability_zone_group')
+    # placement = config.get('aws', 'placement')
     security_group = config.get('aws', 'security_group')
 
+    print '------->', availability_zone_group
+
+
     reservation = conn.request_spot_instances(
-        spot_price, 
-        ami, 
+        spot_price,
+        ami,
         count=count,
-        key_name=key_name, 
-        instance_type=instance_type, 
-        availability_zone_group=availability_zone_group, 
+        key_name=key_name,
+        instance_type=instance_type,
+        availability_zone_group=availability_zone_group,
+        # placement = placement,
         security_groups=[security_group]
     )
-   
+
     spot_ids = [s.id for s in reservation]
- 
+
     while True:
         ready = True
-  
-        try: 
+
+        try:
             for r in conn.get_all_spot_instance_requests(spot_ids):
                 print('Code: %s'%r.status.code)
                 print('Update time: %s'%r.status.update_time)
