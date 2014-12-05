@@ -99,9 +99,6 @@ def add_instance(count):
     # placement = config.get('aws', 'placement')
     security_group = config.get('aws', 'security_group')
 
-    print '------->', availability_zone_group
-
-
     reservation = conn.request_spot_instances(
         spot_price,
         ami,
