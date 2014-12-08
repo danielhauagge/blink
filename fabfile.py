@@ -85,28 +85,16 @@ def start():
 def status():
     run('ps aux | grep python')
 
-@task
-@hosts('localhost')
-def add_instance(count):
-    conn = connect()
-    config = load_config()
 
-    ami = config.get('aws', 'ami')
-    spot_price = config.getfloat('aws', 'spot_price')
-    key_name = config.get('aws', 'key_name')
-    instance_type = config.get('aws', 'instance_type')
-    availability_zone_group = config.get('aws', 'availability_zone_group')
-    # placement = config.get('aws', 'placement')
-    security_group = config.get('aws', 'security_group')
-
+def create_spot_instances():
     reservation = conn.request_spot_instances(
         spot_price,
         ami,
         count=count,
         key_name=key_name,
         instance_type=instance_type,
-        availability_zone_group=availability_zone_group,
-        # placement = placement,
+        #availability_zone_group=availability_zone_group,
+        #placement = placement,
         security_groups=[security_group]
     )
 
@@ -169,3 +157,35 @@ def add_instance(count):
 
                 instance.add_tag('Name', new_name)
                 print('New node named %s'%new_name)
+
+def create_ondemand_instances(conn, ami, security_group, instance_type, starting_no, count, key_name):
+    reservation = conn.run_instances(
+        ami,
+        min_count=count, max_count=count,
+        key_name=key_name,
+        instance_type=instance_type,
+        #availability_zone_group=availability_zone_group,
+        #placement = placement,
+        security_groups=[security_group]
+    )
+
+    for instance in reservation.instances:
+        instance.add_tag('Name', 'blink slave %d'%(starting_no))
+        starting_no += 1
+
+@task
+@hosts('localhost')
+def add_instance(count):
+    conn = connect()
+    config = load_config()
+
+    ami = config.get('aws', 'ami')
+    spot_price = config.getfloat('aws', 'spot_price')
+    key_name = config.get('aws', 'key_name')
+    instance_type = config.get('aws', 'instance_type')
+    availability_zone_group = config.get('aws', 'availability_zone_group')
+    #placement = config.get('aws', 'placement')
+    security_group = config.get('aws', 'security_group')
+
+
+    create_ondemand_instances(conn, ami, security_group, instance_type, 0, count, key_name)
