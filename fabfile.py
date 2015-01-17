@@ -6,6 +6,7 @@ import re
 import sys
 import os
 import logging
+import socket
 
 from common import load_config, get_aws_public_hostname, init_logger
 init_logger()
@@ -41,7 +42,7 @@ def find_blink_instances():
                 continue
             if 'Name' in instance.tags:
                 if name_matcher.match(instance.tags['Name']) is not None:
-                    print instance.tags['Name']
+                    logging.info('%-30s %-30s', instance.tags['Name'], instance.public_dns_name)
                     yield instance
 
 
@@ -74,6 +75,7 @@ def install():
 @task
 def configure():
     put('~/.blink', '~/.blink')
+    put('~/.bashrc', '~/.bashrc')
 
 @task
 def stop():
@@ -82,7 +84,7 @@ def stop():
 @task
 def start(collection, max_images = 0):
     with cd('blink'):
-        run('tmux new-session -d -s blink ./fetch.py --db-hostname {db_hostname} --collection {collection} --max-images {max_images}'.format(db_hostname = get_aws_public_hostname(), collection = collection, max_images = max_images), pty=False)
+        run('tmux new-session -d -s blink "./fetch.py --db-hostname {db_hostname} --collection {collection} --max-images {max_images}"'.format(db_hostname = get_aws_public_hostname(), collection = collection, max_images = max_images), pty=False)
         # run('tmux new-session -d -s blink echo', pty=False)
 
 @task
@@ -144,6 +146,7 @@ def create_spot_instances():
             for reservation in reservations:
                 for instance in reservation.instances:
                     print('State: %s'%instance.state)
+                    print('Status check: %s'%(instance.system_status.status))
                     if instance.state != 'running':
                         ready = False
 
@@ -166,6 +169,21 @@ def create_spot_instances():
                 instance.add_tag('Name', new_name)
                 print('New node named %s'%new_name)
 
+def instance_is_ssh_reachable(hostname):
+    if len(hostname.strip()) == 0: return False
+
+    s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    s.settimeout(1)
+    is_reachable = False
+    try:
+        s.connect((hostname, 22))
+        is_reachable = True
+    except socket.error as e:
+        pass
+    s.close()
+
+    return is_reachable
+
 def create_ondemand_instances(conn, ami, security_group, instance_type, count, key_name):
     reservation = conn.run_instances(
         ami,
@@ -182,6 +200,7 @@ def create_ondemand_instances(conn, ami, security_group, instance_type, count, k
     while True:
         ready = True
 
+        logging.info('')
         logging.info('Checking to see if all instances are in running state')
 
         reservations = conn.get_all_instances(instance_ids)
@@ -189,9 +208,18 @@ def create_ondemand_instances(conn, ami, security_group, instance_type, count, k
             for reservation in reservations:
                 for instance in reservation.instances:
 
-                    print instance.state
                     if instance.state != 'running':
                         ready = False
+
+                    if instance_is_ssh_reachable(instance.public_dns_name):
+                        ssh_reachable = True
+                    else:
+                        ssh_reachable = False
+                        ready = False
+
+                    dns_name = instance.public_dns_name if len(instance.public_dns_name) > 0 else 'NO_DNS_NAME_YET'
+
+                    logging.info('%-40s, %-20s, SSH=%s', dns_name , instance.state, 'YES' if ssh_reachable else 'NO')
 
         if ready: break
 
@@ -211,6 +239,16 @@ def create_ondemand_instances(conn, ami, security_group, instance_type, count, k
         instance.add_tag('Name', new_name)
         starting_no += 1
         logging.info('Created %s', new_name)
+
+@task
+@hosts('localhost')
+def terminate():
+    logging.warn('Will terminate all slave instances now')
+
+    instance_ids = [i.id for i in instances]
+
+    conn = connect()
+    conn.terminate_instances(instance_ids)
 
 @task
 @hosts('localhost')
@@ -238,6 +276,5 @@ def add_instance(count):
     availability_zone_group = config.get('aws', 'availability_zone_group')
     #placement = config.get('aws', 'placement')
     security_group = config.get('aws', 'security_group')
-
 
     create_ondemand_instances(conn, ami, security_group, instance_type, count, key_name)

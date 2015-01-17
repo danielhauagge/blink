@@ -156,9 +156,10 @@ def order(api_key, host, port, database, collection, query, tag, min_date, max_d
 
         for batch in split_every(5, get_next):
             if max_images > 0:
-                n_downloaded = get_n_downloaded(collection)
-                if n_downloaded > max_images:
-                    logging.info('Dowloaded enough images %d, quitting for now'%(n_downloaded))
+                # n_downloaded = get_n_downloaded(collection)
+                n_urls = get_n_urls(collection)
+                if n_urls > max_images:
+                    logging.info('Got enough image urls: %d, quitting now'%(n_urls))
                     sys.exit(1)
 
             try:

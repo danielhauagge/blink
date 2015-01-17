@@ -139,6 +139,9 @@ def load_config():
 def get_n_downloaded(collection):
     return collection.find({'filename': {'$exists': 'true'}}).count()
 
+def get_n_urls(collection):
+    return collection.count()
+
 def expire(collection, key):
     collection.update(
         {key: {'$lt':datetime.datetime.now()}},
