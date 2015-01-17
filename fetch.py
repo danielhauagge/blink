@@ -13,37 +13,60 @@ import os
 import socket
 import sys
 from collections import namedtuple
+import argparse
 
 from common import *
 
-init_logger()
-
-def build_task(task, **kwargs):
-    # print('Importing %s'%task)
-    module = __import__(task)
-    c = getattr(module, task)
-    return c(**kwargs)
+# ------------------------------------------------------------------------------
+# Globals
+# ------------------------------------------------------------------------------
 
 TaskEntry = namedtuple('TaskEntry', 'task,timer')
 
 config = load_config()
 
+init_logger()
 # logging.basicConfig(level=getattr(logging, config.log.upper()))
 logger = logging.getLogger('fetch')
 
-name = '%s:%s'%(config.get('mongodb','host'), config.get('mongodb','port'))
-logger.info('MongoDB host: %s', name)
-client = pymongo.MongoClient(name, auto_start_request=False, max_pool_size=None,
-    read_preference=pymongo.read_preferences.ReadPreference.PRIMARY_PREFERRED)
+# -------------
+# MongoDB
+# -------------
+# mongodb_hostname = '%s:%s'%(config.get('mongodb','host'), config.get('mongodb','port'))
+# logger.info('MongoDB host: %s', mongodb_hostname)
+# mongodb_client = pymongo.MongoClient(mongodb_hostname, auto_start_request=False, max_pool_size=None,
+#     read_preference=pymongo.read_preferences.ReadPreference.PRIMARY_PREFERRED)
 
-logger.info('MongoDB database: %s:%s', config.get('mongodb','database'), config.get('mongodb','collection'))
-collection = client[config.get('mongodb','database')][config.get('mongodb','collection')]
+# logger.info('MongoDB database: %s:%s', config.get('mongodb','database'), config.get('mongodb','collection'))
+collection = None #mongodb_client[config.get('mongodb','database')][config.get('mongodb','collection')]
+mongodb_hostname = None
 
+# -------------
+# AWS
+# -------------
 logging.info('Conecting to AWS services')
 s3conn = S3Connection(config.get('aws', 'aws_key'), config.get('aws','aws_secret'))
 bucket = s3conn.get_bucket(config.get('aws', 'bucket'))
+
+# -------------
+# Flickr
+# -------------
 api_key = config.get('flickr','api_key')
 rate_limit = config.get('flickr','rate_limit')
+
+# -------------
+# Misc
+# -------------
+max_images = -1
+
+# ------------------------------------------------------------------------------
+# Functions
+# ------------------------------------------------------------------------------
+def build_task(task, **kwargs):
+    # print('Importing %s'%task)
+    module = __import__(task)
+    c = getattr(module, task)
+    return c(**kwargs)
 
 def run():
     task_entries = [
@@ -54,6 +77,7 @@ def run():
                 bucket=bucket,
                 api_key=api_key,
                 rate_limit=rate_limit,
+                db_hostname=mongodb_hostname
             ),
             timer=pos
         )
@@ -61,6 +85,12 @@ def run():
 
     try:
         while True:
+            n_downloaded = get_n_downloaded(collection)
+            if n_downloaded > max_images:
+                logging.info('Dowloaded enough images %d, quitting for now'%(n_downloaded))
+                sys.exit(1)
+
+
             task_entries.sort(key=lambda k: k.timer)
 
             # sleep until the earliest task is ready
@@ -117,7 +147,31 @@ def run():
     except Exception:
         raise
 
+# ------------------------------------------------------------------------------
+# Main
+# ------------------------------------------------------------------------------
 if __name__ == '__main__':
+
+    # Parse command line options
+    parser = argparse.ArgumentParser()
+    parser.add_argument('--db-hostname', required = True)
+    parser.add_argument('--collection', required = True)
+    parser.add_argument('--max-images', type = int, default = -1, help = 'Process kills itself after this amount of images has been downloaded')
+    args = parser.parse_args()
+
+    max_images = args.max_images
+
+    # Get connection with database
+    mongodb_hostname = args.db_hostname
+    mongodb_url = '%s:%s'%(mongodb_hostname, config.get('mongodb','port'))
+    logger.info('MongoDB host: %s', mongodb_url)
+    mongodb_client = pymongo.MongoClient(mongodb_url, auto_start_request=False, max_pool_size=None,
+        read_preference=pymongo.read_preferences.ReadPreference.PRIMARY_PREFERRED)
+
+    logger.info('MongoDB database: %s:%s', config.get('mongodb','database'), args.collection)
+    collection = mongodb_client[config.get('mongodb','database')][args.collection]
+
+    # Run
     run()
     exit()
     logging.info('Spawning threads')

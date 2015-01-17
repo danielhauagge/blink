@@ -14,6 +14,7 @@ import Queue
 import time
 from os import path
 from urlparse import urlparse
+import sys
 
 from common import *
 init_logger()
@@ -59,7 +60,7 @@ def search(api_key, query, tag, date_min, date_max):
 
     while not date_ranges.empty():
         date_range = date_ranges.get()
-        logging.info('%s --- %s'%date_range)
+        logging.info('Date range: %s to %s'%date_range)
 
         page = 1
         nPages = 1
@@ -141,23 +142,31 @@ def search(api_key, query, tag, date_min, date_max):
 
             page += 1
 
-def order(api_key, host, port, database, collection, query, tag, min_date, max_date, urls_fname):
-    print host, port
+def order(api_key, host, port, database, collection, query, tag, min_date, max_date, urls_fname, max_images):
+    # logging.info(query)
 
-    logging.info(query)
     client = pymongo.MongoClient(host, port)
     collection = client[database][collection]
 
+    # help(collection)
     try:
         if query != None: get_next = search(api_key, query, tag, min_date, max_date)
         elif urls_fname != None: get_next = get_urls_from_file(urls_fname, tag)
         else: assert(False)
 
-        for batch in split_every(500, get_next):
+        for batch in split_every(5, get_next):
+            if max_images > 0:
+                n_downloaded = get_n_downloaded(collection)
+                if n_downloaded > max_images:
+                    logging.info('Dowloaded enough images %d, quitting for now'%(n_downloaded))
+                    sys.exit(1)
+
             try:
-                collection.insert(batch, continue_on_error=True)
+                collection.insert(batch, continue_on_error = True)
             except pymongo.errors.DuplicateKeyError:
                 pass
+
+
     except FlickrException, e:
         logging.info('ERROR: %s'%e)
 
@@ -168,9 +177,11 @@ if __name__ == '__main__':
     parser.add_argument('--config')
     parser.add_argument('--query')
     parser.add_argument('--urls')
-    parser.add_argument('--tag', required=True)
+    parser.add_argument('--tag', default='tag') # dh: not sure what this is useful for
     parser.add_argument('--min-date')
     parser.add_argument('--max-date')
+    parser.add_argument('--collection')
+    parser.add_argument('--max-images', type = int, default = -1, help = 'Process kills itself after this amount of images has been downloaded')
     args = parser.parse_args()
 
     config = ConfigParser.ConfigParser()
@@ -181,9 +192,10 @@ if __name__ == '__main__':
 
     api_key = config.get('flickr', 'api_key')
 
-    host = config.get('mongodb', 'host')
+    host = get_aws_public_hostname()
     port = config.getint('mongodb', 'port')
     database = config.get('mongodb', 'database')
-    collection = config.get('mongodb', 'collection')
+    collection = args.collection
 
-    order(api_key, host, port, database, collection, args.query, args.tag, args.min_date, args.max_date, args.urls)
+    order(api_key, host, port, database, collection, args.query, args.tag, 
+        args.min_date, args.max_date, args.urls, args.max_images)

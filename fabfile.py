@@ -5,8 +5,10 @@ import boto.ec2
 import re
 import sys
 import os
+import logging
 
-from common import load_config
+from common import load_config, get_aws_public_hostname, init_logger
+init_logger()
 
 from fabric.api import *
 
@@ -39,6 +41,7 @@ def find_blink_instances():
                 continue
             if 'Name' in instance.tags:
                 if name_matcher.match(instance.tags['Name']) is not None:
+                    print instance.tags['Name']
                     yield instance
 
 
@@ -49,15 +52,15 @@ env.key_filename = os.path.expanduser(load_config().get('ssh','identity_file'))
 
 @task
 def hostname():
-    run('hostname')
+    run('curl http://169.254.169.254/latest/meta-data/public-hostname')
 
 @task
-def upgrade():
+def upgrade(collection, max_images = 0):
     install()
     with cd('blink'):
         run('git pull')
     stop()
-    start()
+    start(collection, max_images)
 
 @task
 def install():
@@ -77,14 +80,26 @@ def stop():
     run('tmux kill-session -t blink', warn_only=True)
 
 @task
-def start():
+def start(collection, max_images = 0):
     with cd('blink'):
-        run('tmux new-session -d -s blink ./fetch.py', pty=False)
+        run('tmux new-session -d -s blink ./fetch.py --db-hostname {db_hostname} --collection {collection} --max-images {max_images}'.format(db_hostname = get_aws_public_hostname(), collection = collection, max_images = max_images), pty=False)
+        # run('tmux new-session -d -s blink echo', pty=False)
 
 @task
 def status():
-    run('ps aux | grep python')
+    run('echo `ps aux | grep python | grep -v grep`')
 
+def get_existing_slave_ids():
+    existing = set()
+
+    name_matcher = re.compile('blink slave (\d+)')
+    for instance in instances:
+        name = instance.tags['Name']
+        groups = name_matcher.match(name).groups()
+        num = int(groups[0])
+        existing.add(num)
+   
+    return existing
 
 def create_spot_instances():
     reservation = conn.request_spot_instances(
@@ -118,14 +133,7 @@ def create_spot_instances():
 
         time.sleep(1)
 
-    existing = set()
-
-    name_matcher = re.compile('blink slave (\d+)')
-    for instance in instances:
-        name = instance.tags['Name']
-        groups = name_matcher.match(name).groups()
-        num = int(groups[0])
-        existing.add(num)
+    existing = get_existing_slave_ids()
 
     while True:
         ready = True
@@ -158,7 +166,7 @@ def create_spot_instances():
                 instance.add_tag('Name', new_name)
                 print('New node named %s'%new_name)
 
-def create_ondemand_instances(conn, ami, security_group, instance_type, starting_no, count, key_name):
+def create_ondemand_instances(conn, ami, security_group, instance_type, count, key_name):
     reservation = conn.run_instances(
         ami,
         min_count=count, max_count=count,
@@ -169,9 +177,53 @@ def create_ondemand_instances(conn, ami, security_group, instance_type, starting
         security_groups=[security_group]
     )
 
+    instance_ids = [s.id for s in reservation.instances]
+
+    while True:
+        ready = True
+
+        logging.info('Checking to see if all instances are in running state')
+
+        reservations = conn.get_all_instances(instance_ids)
+        for reservation in reservations:
+            for reservation in reservations:
+                for instance in reservation.instances:
+
+                    print instance.state
+                    if instance.state != 'running':
+                        ready = False
+
+        if ready: break
+
+        time.sleep(1)
+
+    logging.info('All instances up and running!')
+
+    existing = get_existing_slave_ids()
+    if len(existing) > 0:
+        starting_no = max(get_existing_slave_ids()) + 1
+    else:
+        starting_no = 0
+
+    logging.info('Renaming instances')
     for instance in reservation.instances:
-        instance.add_tag('Name', 'blink slave %d'%(starting_no))
+        new_name = 'blink slave %d'%(starting_no)
+        instance.add_tag('Name', new_name)
         starting_no += 1
+        logging.info('Created %s', new_name)
+
+@task
+@hosts('localhost')
+def state():
+    conn = connect()
+    reservations = conn.get_all_instances()
+    name_matcher = re.compile('blink slave \d+')
+
+    for reservation in reservations:
+
+        for instance in reservation.instances:
+            if ('Name' not in instance.tags) or (name_matcher.match(instance.tags['Name']) is None): continue
+            logging.info('%s: %s',  instance.tags['Name'], instance.state)
 
 @task
 @hosts('localhost')
@@ -188,4 +240,4 @@ def add_instance(count):
     security_group = config.get('aws', 'security_group')
 
 
-    create_ondemand_instances(conn, ami, security_group, instance_type, 0, count, key_name)
+    create_ondemand_instances(conn, ami, security_group, instance_type, count, key_name)

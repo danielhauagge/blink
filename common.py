@@ -5,10 +5,16 @@ import datetime
 # import argparse
 import ConfigParser
 from collections import namedtuple
-
+from commands import getoutput
 import os
 
 LAST_FLICKR_TIME = datetime.datetime.now()
+
+
+
+def get_aws_public_hostname():
+    return getoutput('curl -s http://169.254.169.254/latest/meta-data/public-ipv4')
+    # return getoutput('curl http://169.254.169.254/latest/meta-data/public-hostname')
 
 def init_logger():
     '''Initialize the logger, call at the begining of main.
@@ -129,6 +135,9 @@ def load_config():
 #         log=args.log,
 #         rate_limit=rate_limit,
 #     )
+
+def get_n_downloaded(collection):
+    return collection.find({'filename': {'$exists': 'true'}}).count()
 
 def expire(collection, key):
     collection.update(
