@@ -1,7 +1,8 @@
 #!/usr/bin/env bash
 
 #
-# 
+# Runs the full image downloading pipeline, from spinning up EC2 instances to starting slaves
+# and master process, to finally spinning down the EC2 instances.
 #
 
 N_SLAVES=2
