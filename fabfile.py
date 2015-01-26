@@ -208,6 +208,9 @@ def create_ondemand_instances(conn, ami, security_group, instance_type, count, k
             for reservation in reservations:
                 for instance in reservation.instances:
 
+                    if instance.state == 'terminated' or instance.state == 'shutting-down':
+                        continue
+
                     if instance.state != 'running':
                         ready = False
 
