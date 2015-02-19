@@ -57,7 +57,8 @@ rate_limit = config.get('flickr','rate_limit')
 # -------------
 # Misc
 # -------------
-max_images = sys.maxint
+DEFAULT_MAX_IMAGES = sys.maxint
+max_images = DEFAULT_MAX_IMAGES
 
 # ------------------------------------------------------------------------------
 # Functions
@@ -85,11 +86,12 @@ def run():
 
     try:
         while True:
-            n_downloaded = get_n_downloaded(collection)
-            if n_downloaded > max_images:
-                logging.info('Dowloaded enough images %d, quitting for now'%(n_downloaded))
-                sys.exit(1)
 
+            if max_images != DEFAULT_MAX_IMAGES:
+                n_downloaded = get_n_downloaded(collection)
+                if n_downloaded > max_images:
+                    logging.info('Dowloaded enough images %d, quitting for now'%(n_downloaded))
+                    sys.exit(1)
 
             task_entries.sort(key=lambda k: k.timer)
 
@@ -156,7 +158,8 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument('--db-hostname', required = True)
     parser.add_argument('--collection', required = True)
-    parser.add_argument('--max-images', type = int, default = sys.maxint, help = 'Process kills itself after this amount of images has been downloaded')
+    parser.add_argument('--max-images', type = int, default = DEFAULT_MAX_IMAGES,
+                        help = 'Process kills itself after this amount of images has been downloaded')
     args = parser.parse_args()
 
     max_images = args.max_images
@@ -172,9 +175,10 @@ if __name__ == '__main__':
     collection = mongodb_client[config.get('mongodb','database')][args.collection]
 
     # Run
-    run()
-    exit()
-    logging.info('Spawning threads')
-    threads = [gevent.spawn(run) for _ in xrange(multiprocessing.cpu_count() * 8)]
+    # run()
+    # exit()
+    n_threads = multiprocessing.cpu_count() * 8
+    logging.info('Spawning %d threads', n_threads)
+    threads = [gevent.spawn(run) for _ in xrange(n_threads)]
 
     gevent.joinall(threads)
