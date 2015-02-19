@@ -56,7 +56,7 @@ def hostname():
     run('curl http://169.254.169.254/latest/meta-data/public-hostname')
 
 @task
-def upgrade(collection, max_images = 0):
+def upgrade(collection, max_images = sys.maxint):
     install()
     with cd('blink'):
         run('git pull')
@@ -82,7 +82,7 @@ def stop():
     run('tmux kill-session -t blink', warn_only=True)
 
 @task
-def start(collection, max_images = 0):
+def start(collection, max_images = sys.maxint):
     with cd('blink'):
         run('tmux new-session -d -s blink "./fetch.py --db-hostname {db_hostname} --collection {collection} --max-images {max_images}"'.format(db_hostname = get_aws_public_hostname(), collection = collection, max_images = max_images), pty=False)
         # run('tmux new-session -d -s blink echo', pty=False)
@@ -100,7 +100,7 @@ def get_existing_slave_ids():
         groups = name_matcher.match(name).groups()
         num = int(groups[0])
         existing.add(num)
-   
+
     return existing
 
 def create_spot_instances():

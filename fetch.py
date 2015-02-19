@@ -57,7 +57,7 @@ rate_limit = config.get('flickr','rate_limit')
 # -------------
 # Misc
 # -------------
-max_images = -1
+max_images = sys.maxint
 
 # ------------------------------------------------------------------------------
 # Functions
@@ -156,7 +156,7 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument('--db-hostname', required = True)
     parser.add_argument('--collection', required = True)
-    parser.add_argument('--max-images', type = int, default = -1, help = 'Process kills itself after this amount of images has been downloaded')
+    parser.add_argument('--max-images', type = int, default = sys.maxint, help = 'Process kills itself after this amount of images has been downloaded')
     args = parser.parse_args()
 
     max_images = args.max_images

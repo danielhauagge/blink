@@ -181,25 +181,22 @@ def order(api_key, host, port, database, collection, query, tag, min_date, max_d
 if __name__ == '__main__':
     logging.basicConfig(level=logging.INFO)
 
+    # Parse command line arguments
     parser = argparse.ArgumentParser()
-    parser.add_argument('--config')
-    parser.add_argument('--query')
-    parser.add_argument('--urls')
+    parser.add_argument('--config', help = 'Configuration file to use [default = %(default)s]', default = '~/.blink')
+    parser.add_argument('--query', help = 'Flickr query string')
+    parser.add_argument('--urls', metavar = 'FNAME', help = 'Load URLs from file FNAME')
     parser.add_argument('--tag', default='tag') # dh: not sure what this is useful for
-    parser.add_argument('--min-date', help = 'Format is %%Y-%%m-%%d')
-    parser.add_argument('--max-date', help = 'Format is %%Y-%%m-%%d')
-    parser.add_argument('--collection')
+    parser.add_argument('--min-date', help = 'Restricts query results to images taken after this date (format is %%Y-%%m-%%d)')
+    parser.add_argument('--max-date', help = 'Restricts query results to images taken before this date (format is %%Y-%%m-%%d)')
+    parser.add_argument('--collection', help = 'MongoDB collection and subdirectory name on S3')
     parser.add_argument('--max-images', type = int, default = -1, help = 'Process kills itself after this amount of images has been downloaded')
     args = parser.parse_args()
 
+    # Load configuration file
     config = ConfigParser.ConfigParser()
-    if args.config is None:
-        config.read(path.expanduser('~/.blink'))
-    else:
-        config.read(args.config)
-
+    config.read(path.expanduser(args.config))
     api_key = config.get('flickr', 'api_key')
-
     host = get_aws_public_hostname()
     port = config.getint('mongodb', 'port')
     database = config.get('mongodb', 'database')
