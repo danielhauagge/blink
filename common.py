@@ -40,104 +40,17 @@ class FlickrException(Exception):
         Exception.__init__(self, message)
         self.code = code
 
-# Config = namedtuple(
-#         'Config',
-#         'api_key,host,port,database,collection,aws_key,aws_secret,bucket,tasks,email,log,rate_limit',
-# )
-
 def load_config():
-    # parser = argparse.ArgumentParser()
-    # parser.add_argument('--config')
-    # parser.add_argument('--log', default='WARNING')
-    # args = parser.parse_args()
-    #
     config = ConfigParser.ConfigParser()
-    # if args.config is None:
-    #     from os import path
-
     config.read(os.path.expanduser('~/.blink'))
-    # else:
-    #     config.read(args.config)
-
     return config
 
-    # api_key = config.get('flickr', 'api_key')
-    # rate_limit = config.getboolean('flickr', 'rate_limit')
-    #
-    # host = config.get('mongodb', 'host')
-    # port = config.getint('mongodb', 'port')
-    # database = config.get('mongodb', 'database')
-    # collection = config.get('mongodb', 'collection')
-    #
-    # aws_key = config.get('aws', 'aws_key')
-    # aws_secret = config.get('aws', 'aws_secret')
-    # bucket = config.get('aws', 'bucket')
-    #
-    # tasks = config.get('workers', 'tasks').split(',')
-    #
-    # email = config.get('admin', 'email')
-    #
-    # return Config(
-    #     api_key=api_key,
-    #     host=host,
-    #     port=port,
-    #     database=database,
-    #     collection=collection,
-    #     aws_key=aws_key,
-    #     aws_secret=aws_secret,
-    #     bucket=bucket,
-    #     tasks=tasks,
-    #     email=email,
-    #     log='WARNING',#args.log,
-    #     rate_limit=rate_limit,
-    # )
-
-# def load_config():
-#     parser = argparse.ArgumentParser()
-#     parser.add_argument('--config')
-#     parser.add_argument('--log', default='WARNING')
-#     args = parser.parse_args()
-#
-#     config = ConfigParser.ConfigParser()
-#     if args.config is None:
-#         from os import path
-#         config.read(path.expanduser('~/.blink'))
-#     else:
-#         config.read(args.config)
-#
-#     api_key = config.get('flickr', 'api_key')
-#     rate_limit = config.getboolean('flickr', 'rate_limit')
-#
-#     host = config.get('mongodb', 'host')
-#     port = config.getint('mongodb', 'port')
-#     database = config.get('mongodb', 'database')
-#     collection = config.get('mongodb', 'collection')
-#
-#     aws_key = config.get('aws', 'aws_key')
-#     aws_secret = config.get('aws', 'aws_secret')
-#     bucket = config.get('aws', 'bucket')
-#
-#     tasks = config.get('workers', 'tasks').split(',')
-#
-#     email = config.get('admin', 'email')
-#
-#     return Config(
-#         api_key=api_key,
-#         host=host,
-#         port=port,
-#         database=database,
-#         collection=collection,
-#         aws_key=aws_key,
-#         aws_secret=aws_secret,
-#         bucket=bucket,
-#         tasks=tasks,
-#         email=email,
-#         log=args.log,
-#         rate_limit=rate_limit,
-#     )
 
 def get_n_downloaded(collection):
     return collection.find({'filename': {'$exists': 'true'}}).count()
+
+def remove_downloaded(collection):
+    return collection.remove({'filename': {'$exists': 'true'}})
 
 def get_n_urls(collection):
     return collection.count()
