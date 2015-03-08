@@ -95,10 +95,13 @@ def search(api_key, query, tag, date_min, date_max):
                 continue
             response = json.loads(data)
 
+            logging.info(response['stat'])
+
             if response['stat'] == 'fail':
                 raise FlickrException(response['code'], response['message'])
 
             if response['photos']['pages'] == 0:
+                logging.info("response['photos']['pages'] == 0, sleeping for 10 sec")
                 time.sleep(10)
                 continue
 
@@ -113,7 +116,7 @@ def search(api_key, query, tag, date_min, date_max):
                 continue
 
 
-            logging.info('Page %d/%d'%(page, nPages))
+            logging.info('Page %d/%d, %d urls', page, nPages, len(response['photos']['photo']))
 
             # Apparently this can't be trusted
             #assert response['photos']['page'] == page
@@ -198,5 +201,5 @@ if __name__ == '__main__':
     database = config.get('mongodb', 'database')
     collection = args.collection
 
-    order(api_key, host, port, database, collection, args.query, args.tag, 
+    order(api_key, host, port, database, collection, args.query, args.tag,
         args.min_date, args.max_date, args.urls, args.max_images)
