@@ -64,6 +64,7 @@ def search(api_key, query, tag, date_min, date_max):
 
         page = 1
         nPages = 1
+        n_photos = 0
 
         while page <= nPages:
             params = {
@@ -80,12 +81,14 @@ def search(api_key, query, tag, date_min, date_max):
                 'safe_search'       :   3,
                 'content_type'      :   6,
             }
+
             if date_min is not None:
                 params['min_taken_date'] = date_range[0]
             if date_max is not None:
                 params['max_taken_date'] = date_range[1]
+
             try:
-                logging.info('Requesting page %d (%s - %s)'%(page, date_range[0], date_range[1]))
+                logging.info('Requesting page %d/%d (%d photos) (Date range: %s to %s)', page, nPages, n_photos, date_range[0], date_range[1])
                 #rate_limiter()
                 r = urllib2.urlopen('https://api.flickr.com/services/rest/?%s'%urllib.urlencode(params))
                 data = r.read()
@@ -94,8 +97,6 @@ def search(api_key, query, tag, date_min, date_max):
                 time.sleep(10)
                 continue
             response = json.loads(data)
-
-            logging.info(response['stat'])
 
             if response['stat'] == 'fail':
                 raise FlickrException(response['code'], response['message'])
@@ -106,6 +107,7 @@ def search(api_key, query, tag, date_min, date_max):
                 continue
 
             nPages = response['photos']['pages']
+            print '****** debug', nPages, date_range
 
             if nPages > 7 and date_range[0] is not None and date_range[1] is not None:
                 logging.info('Too many pages.  Splitting date range.')
@@ -139,6 +141,8 @@ def search(api_key, query, tag, date_min, date_max):
                         'exif_expires'          :   epoch,
                         'focal_hint_expires'    :   epoch,
                     }
+                    # print 'idownder %s %s'%(photo['id'], photo['owner'])
+                    n_photos += 1
                     yield photo_obj
                 except Exception, exc:
                     logging.info(exc)
@@ -177,25 +181,22 @@ def order(api_key, host, port, database, collection, query, tag, min_date, max_d
 if __name__ == '__main__':
     logging.basicConfig(level=logging.INFO)
 
+    # Parse command line arguments
     parser = argparse.ArgumentParser()
-    parser.add_argument('--config')
-    parser.add_argument('--query')
-    parser.add_argument('--urls')
+    parser.add_argument('--config', help = 'Configuration file to use [default = %(default)s]', default = '~/.blink')
+    parser.add_argument('--query', help = 'Flickr query string')
+    parser.add_argument('--urls', metavar = 'FNAME', help = 'Load URLs from file FNAME')
     parser.add_argument('--tag', default='tag') # dh: not sure what this is useful for
-    parser.add_argument('--min-date')
-    parser.add_argument('--max-date')
-    parser.add_argument('--collection')
+    parser.add_argument('--min-date', help = 'Restricts query results to images taken after this date (format is %%Y-%%m-%%d)')
+    parser.add_argument('--max-date', help = 'Restricts query results to images taken before this date (format is %%Y-%%m-%%d)')
+    parser.add_argument('--collection', help = 'MongoDB collection and subdirectory name on S3')
     parser.add_argument('--max-images', type = int, default = -1, help = 'Process kills itself after this amount of images has been downloaded')
     args = parser.parse_args()
 
+    # Load configuration file
     config = ConfigParser.ConfigParser()
-    if args.config is None:
-        config.read(path.expanduser('~/.blink'))
-    else:
-        config.read(args.config)
-
+    config.read(path.expanduser(args.config))
     api_key = config.get('flickr', 'api_key')
-
     host = get_aws_public_hostname()
     port = config.getint('mongodb', 'port')
     database = config.get('mongodb', 'database')
